@@ -14,7 +14,11 @@ export default function AdminPanel({ apiUrl, adminToken, onLogout }) {
   );
   const [reservas, setReservas] = useState([]);
   const [cargando, setCargando] = useState(false);
-  const [filtro, setFiltro] = useState("todas");
+
+  // Filtros avanzados
+  const [filtroEstado, setFiltroEstado] = useState("todas"); // todas | activas | confirmadas | canceladas
+  const [filtroCancha, setFiltroCancha] = useState("todas"); // todas | 1 | 2 | 3 ...
+  const [busqueda, setBusqueda] = useState(""); // nombre / teléfono
 
   /**
    * Cargar reservas del backend para la fecha seleccionada.
@@ -22,7 +26,6 @@ export default function AdminPanel({ apiUrl, adminToken, onLogout }) {
   const cargarReservas = async () => {
     if (!adminToken) {
       console.warn("No adminToken → No se puede cargar reservas.");
-      return;
     }
 
     setCargando(true);
@@ -115,29 +118,52 @@ export default function AdminPanel({ apiUrl, adminToken, onLogout }) {
   };
 
   /**
-   * KPI para las tarjetas superiores.
+   * Métricas globales.
    */
   const stats = useMemo(() => {
     const total = reservas.length;
     const canceladas = reservas.filter((r) => r.estado === "cancelada").length;
+    const confirmadas = reservas.filter((r) => r.estado === "confirmada").length;
+    const pendientes = reservas.filter((r) => r.estado === "pendiente").length;
+
     return {
       total,
       activas: total - canceladas,
       canceladas,
+      confirmadas,
+      pendientes,
     };
   }, [reservas]);
 
   /**
-   * Filtrado de reservas visibles.
+   * Aplicar filtros avanzados sobre la lista de reservas.
    */
   const reservasVisibles = reservas.filter((r) => {
-    if (filtro === "activas") return r.estado !== "cancelada";
-    if (filtro === "canceladas") return r.estado === "cancelada";
+    // Filtro por estado
+    if (filtroEstado === "activas" && r.estado === "cancelada") return false;
+    if (filtroEstado === "confirmadas" && r.estado !== "confirmada") return false;
+    if (filtroEstado === "canceladas" && r.estado !== "cancelada") return false;
+
+    // Filtro por cancha
+    if (filtroCancha !== "todas" && String(r.id_cancha) !== filtroCancha) {
+      return false;
+    }
+
+    // Búsqueda por nombre o teléfono
+    if (busqueda.trim() !== "") {
+      const texto = busqueda.toLowerCase();
+      const nombre = (r.nombre_cliente || "").toLowerCase();
+      const telefono = (r.telefono_cliente || "").toLowerCase();
+      if (!nombre.includes(texto) && !telefono.includes(texto)) {
+        return false;
+      }
+    }
+
     return true;
   });
 
   return (
-    <div className="animate-fadeIn space-y-6 pb-16 w-full max-w-2xl mx-auto">
+    <div className="animate-fadeIn space-y-6 pb-16 w-full max-w-3xl mx-auto">
       {/* HEADER */}
       <div className="flex justify-between items-center pb-2 border-b border-slate-800/50">
         <div>
@@ -170,9 +196,9 @@ export default function AdminPanel({ apiUrl, adminToken, onLogout }) {
         </button>
       </div>
 
-      {/* FECHA */}
-      <div className="bg-slate-900 border border-slate-800 p-4 rounded-2xl flex flex-col sm:flex-row gap-4 items-center justify-between shadow-lg">
-        <div className="flex items-center gap-4 w-full sm:w-auto">
+      {/* FECHA + BOTÓN ACTUALIZAR */}
+      <div className="bg-slate-900 border border-slate-800 p-4 rounded-2xl flex flex-col lg:flex-row gap-4 items-center justify-between shadow-lg">
+        <div className="flex items-center gap-4 w-full lg:w-auto">
           <div className="w-10 h-10 bg-emerald-500/10 rounded-xl flex items-center justify-center text-emerald-400 border border-emerald-500/20">
             <svg
               className="w-5 h-5"
@@ -224,9 +250,9 @@ export default function AdminPanel({ apiUrl, adminToken, onLogout }) {
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-4 gap-3">
         <div className="bg-slate-900 border border-slate-800 p-4 rounded-2xl flex flex-col items-center justify-center">
-          <span className="text-3xl font-bold text-white mb-1">
+          <span className="text-2xl font-bold text-white mb-1">
             {stats.total}
           </span>
           <span className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">
@@ -234,38 +260,83 @@ export default function AdminPanel({ apiUrl, adminToken, onLogout }) {
           </span>
         </div>
         <div className="bg-emerald-900/10 border border-emerald-500/20 p-4 rounded-2xl flex flex-col items-center justify-center">
-          <span className="text-3xl font-bold text-emerald-400 mb-1">
+          <span className="text-2xl font-bold text-emerald-400 mb-1">
             {stats.activas}
           </span>
           <span className="text-[10px] text-emerald-500/70 uppercase font-bold tracking-wider">
             Activas
           </span>
         </div>
+        <div className="bg-sky-900/10 border border-sky-500/20 p-4 rounded-2xl flex flex-col items-center justify-center">
+          <span className="text-2xl font-bold text-sky-400 mb-1">
+            {stats.confirmadas}
+          </span>
+          <span className="text-[10px] text-sky-500/70 uppercase font-bold tracking-wider">
+            Confirmadas
+          </span>
+        </div>
         <div className="bg-red-900/10 border border-red-500/20 p-4 rounded-2xl flex flex-col items-center justify-center">
-          <span className="text-3xl font-bold text-red-400 mb-1">
+          <span className="text-2xl font-bold text-red-400 mb-1">
             {stats.canceladas}
           </span>
           <span className="text-[10px] text-red-500/70 uppercase font-bold tracking-wider">
-            Bajas
+            Canceladas
           </span>
         </div>
       </div>
 
-      {/* FILTROS */}
-      <div className="bg-slate-900/50 p-1 rounded-xl flex border border-slate-800">
-        {["todas", "activas", "canceladas"].map((f) => (
-          <button
-            key={f}
-            onClick={() => setFiltro(f)}
-            className={`flex-1 py-2 text-xs font-bold uppercase tracking-wide rounded-lg transition-all ${
-              filtro === f
-                ? "bg-slate-800 text-white shadow-sm border border-slate-700"
-                : "text-slate-500 hover:text-slate-300 hover:bg-slate-800/50"
-            }`}
-          >
-            {f}
-          </button>
-        ))}
+      {/* FILTROS AVANZADOS */}
+      <div className="bg-slate-900 border border-slate-800 p-4 rounded-2xl space-y-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {/* Filtro estado */}
+          <div>
+            <label className="block text-[10px] uppercase font-bold text-slate-500 tracking-wider mb-1">
+              Estado
+            </label>
+            <select
+              value={filtroEstado}
+              onChange={(e) => setFiltroEstado(e.target.value)}
+              className="w-full text-xs bg-slate-950 border border-slate-700 rounded-lg px-2 py-2 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+            >
+              <option value="todas">Todas</option>
+              <option value="activas">Activas</option>
+              <option value="confirmadas">Confirmadas</option>
+              <option value="canceladas">Canceladas</option>
+            </select>
+          </div>
+
+          {/* Filtro cancha */}
+          <div>
+            <label className="block text-[10px] uppercase font-bold text-slate-500 tracking-wider mb-1">
+              Cancha
+            </label>
+            <select
+              value={filtroCancha}
+              onChange={(e) => setFiltroCancha(e.target.value)}
+              className="w-full text-xs bg-slate-950 border border-slate-700 rounded-lg px-2 py-2 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+            >
+              <option value="todas">Todas</option>
+              <option value="1">Cancha 1</option>
+              <option value="2">Cancha 2</option>
+              <option value="3">Cancha 3</option>
+              {/* Podés agregar más si en el futuro hay más canchas */}
+            </select>
+          </div>
+
+          {/* Búsqueda */}
+          <div>
+            <label className="block text-[10px] uppercase font-bold text-slate-500 tracking-wider mb-1">
+              Buscar
+            </label>
+            <input
+              type="text"
+              value={busqueda}
+              onChange={(e) => setBusqueda(e.target.value)}
+              placeholder="Nombre o teléfono"
+              className="w-full text-xs bg-slate-950 border border-slate-700 rounded-lg px-2 py-2 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+            />
+          </div>
+        </div>
       </div>
 
       {/* LISTA */}
