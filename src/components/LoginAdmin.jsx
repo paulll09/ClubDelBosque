@@ -5,7 +5,7 @@ import React, { useState } from "react";
  *
  * Recibe:
  *  - apiUrl: URL base del backend
- *  - onLoginCorrecto: función que se llama cuando el login fue exitoso
+ *  - onLoginCorrecto(token): callback que recibe el token de admin
  */
 function LoginAdmin({ apiUrl, onLoginCorrecto }) {
   const [usuario, setUsuario] = useState("");
@@ -14,22 +14,15 @@ function LoginAdmin({ apiUrl, onLoginCorrecto }) {
 
   const manejarSubmit = async (e) => {
     e.preventDefault();
-
-    if (!usuario.trim() || !password.trim()) {
-      alert("Completá usuario y contraseña.");
-      return;
-    }
+    setCargando(true);
 
     try {
-      setCargando(true);
-
       const respuesta = await fetch(`${apiUrl}/admin/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        // incluye cookies de sesión
-        credentials: "include",
+        // No dependemos de cookies, solo de token
         body: JSON.stringify({ usuario, password }),
       });
 
@@ -40,8 +33,13 @@ function LoginAdmin({ apiUrl, onLoginCorrecto }) {
         return;
       }
 
+      if (!data.token) {
+        alert("No se recibió token de autenticación desde el servidor.");
+        return;
+      }
+
       alert("Login correcto.");
-      onLoginCorrecto(); // avisamos al padre
+      onLoginCorrecto(data.token);
     } catch (error) {
       console.error("Error en login admin:", error);
       alert("No se pudo iniciar sesión.");
@@ -77,14 +75,14 @@ function LoginAdmin({ apiUrl, onLoginCorrecto }) {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className="w-full rounded-xl bg-slate-800 border border-slate-700 px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500"
-            placeholder="••••••••"
+            placeholder="********"
           />
         </div>
 
         <button
           type="submit"
           disabled={cargando}
-          className="w-full rounded-full py-2 text-xs font-semibold bg-emerald-500 text-slate-950 active:scale-[0.98] disabled:opacity-60"
+          className="w-full mt-2 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-60 disabled:cursor-not-allowed text-xs font-semibold py-2 rounded-xl transition-colors"
         >
           {cargando ? "Ingresando..." : "Ingresar"}
         </button>

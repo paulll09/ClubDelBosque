@@ -7,24 +7,30 @@ export default function AdminPanel({ apiUrl, onLogout }) {
   const [filtro, setFiltro] = useState("todas"); 
 
   // --- CARGAR Y ORDENAR ---
-  const cargarReservas = async () => {
-    if (!fechaAdmin) return;
+    const cargarReservas = async () => {
+    if (!fechaAdmin || !adminToken) return;
     setCargando(true);
     try {
-      const res = await fetch(`${apiUrl}/admin/reservas?fecha=${fechaAdmin}`, {
-        credentials: "include",
-      });
+      const res = await fetch(
+        `${apiUrl}/admin/reservas?fecha=${fechaAdmin}`,
+        {
+          headers: {
+            "X-Admin-Token": adminToken,
+          },
+        }
+      );
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        alert(data.mensaje || "No se pudieron cargar las reservas.");
+        return;
+      }
+
       const data = await res.json();
-      
-      let lista = Array.isArray(data) ? data : [];
-
-      // ORDENAR: De menor a mayor horario
-      lista.sort((a, b) => a.hora.localeCompare(b.hora));
-
-      setReservas(lista);
+      setReservas(data || []);
     } catch (error) {
-      console.error("Error:", error);
-      alert("Error al cargar reservas.");
+      console.error("Error al cargar reservas admin:", error);
+      alert("Error de conexión al cargar reservas.");
     } finally {
       setCargando(false);
     }
@@ -32,7 +38,7 @@ export default function AdminPanel({ apiUrl, onLogout }) {
 
   useEffect(() => {
     cargarReservas();
-  }, [fechaAdmin]);
+  }, [fechaAdmin, adminToken]);
 
   // --- ACCIONES ---
   
