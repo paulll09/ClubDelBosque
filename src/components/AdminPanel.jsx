@@ -194,6 +194,15 @@ export default function AdminPanel({ apiUrl, adminToken, onLogout }) {
     return fin <= ini;
   }, [configClub]);
 
+/**
+ * Helper: nombre del día de la semana.
+ */
+  const nombreDia = (fechaStr) => {
+    const dias = ["Domingo","Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"];
+    const d = new Date(fechaStr);
+    return dias[d.getDay()];
+  };
+
   /**
    * Helper: convierte "HH:MM" a minutos, ajustando si cruza medianoche.
    * Si cruza medianoche, las horas menores a la apertura se consideran "día siguiente"
@@ -626,7 +635,11 @@ export default function AdminPanel({ apiUrl, adminToken, onLogout }) {
                           <span>{hora}</span>
                           {esHoraDelDiaSiguiente(hora) && (
                             <span className="text-[9px] text-amber-300 bg-amber-500/10 px-1.5 py-0.5 rounded-full border border-amber-500/30 uppercase tracking-wider">
-                              +1 día
+                              ({nombreDia(
+                                new Date(
+                                  new Date(fechaAdmin).getTime() + 24 * 60 * 60 * 1000
+                                ).toISOString().slice(0, 10)
+                               )})
                             </span>
                           )}
                         </div>
