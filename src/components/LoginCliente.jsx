@@ -57,6 +57,7 @@ export default function LoginCliente({ onLoginSuccess, onCancelar, apiUrl }) {
         const mensajeError =
           data.messages?.error ||
           data.messages ||
+          data.mensaje ||
           data.message ||
           "Error en la solicitud";
 
