@@ -197,11 +197,12 @@ export default function AdminPanel({ apiUrl, adminToken, onLogout }) {
 /**
  * Helper: nombre del día de la semana.
  */
-  const nombreDia = (fechaStr) => {
-    const dias = ["Domingo","Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"];
-    const d = new Date(fechaStr);
-    return dias[d.getDay()];
-  };
+const nombreDia = (fechaStr) => {
+  const dias = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+  const d = new Date(fechaStr);
+  if (Number.isNaN(d.getTime())) return "";
+  return dias[d.getDay()];
+};
 
   /**
    * Helper: convierte "HH:MM" a minutos, ajustando si cruza medianoche.
@@ -631,18 +632,7 @@ export default function AdminPanel({ apiUrl, adminToken, onLogout }) {
                   {horasUnicas.map((hora) => (
                     <tr key={`fila-hora-${hora}`}>
                       <td className="align-top px-2 py-1 text-[11px] text-slate-300 font-mono">
-                        <div className="flex items-center gap-1">
-                          <span>{hora}</span>
-                          {esHoraDelDiaSiguiente(hora) && (
-                            <span className="text-[9px] text-amber-300 bg-amber-500/10 px-1.5 py-0.5 rounded-full border border-amber-500/30 uppercase tracking-wider">
-                              ({nombreDia(
-                                new Date(
-                                  new Date(fechaAdmin).getTime() + 24 * 60 * 60 * 1000
-                                ).toISOString().slice(0, 10)
-                               )})
-                            </span>
-                          )}
-                        </div>
+                        <span>{hora}</span>
                       </td>
                       {canchasUnicas.map((cancha) => {
                         const r = obtenerReservaCelda(hora, cancha);
@@ -693,8 +683,8 @@ export default function AdminPanel({ apiUrl, adminToken, onLogout }) {
                                 {r.estado && ` · ${r.estado}`}
                                 {fechaEsDiferente && (
                                   <span className="ml-1 text-[8px] uppercase opacity-80">
-                                    ({r.fecha})
-                                  </span>
+                                    ({nombreDia(r.fecha)})
+                                  </span> 
                                 )}
                               </span>
                             </div>
