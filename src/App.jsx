@@ -220,12 +220,65 @@ export default function App() {
         r.estado === "confirmada" && String(r.hora).slice(0, 5) === hora
     );
 
-  const esHorarioPasado = (hora) => {
-    if (!fechaSeleccionada) return false;
-    const [Y, M, D] = fechaSeleccionada.split("-").map(Number);
-    const [h, m] = hora.split(":").map(Number);
-    return new Date(Y, M - 1, D, h, m) < new Date();
-  };
+const esHorarioPasado = (hora) => {
+  if (!fechaSeleccionada) return false;
+
+  const ahora = new Date();
+  const hoySinHora = new Date(
+    ahora.getFullYear(),
+    ahora.getMonth(),
+    ahora.getDate()
+  );
+
+  const [Y, M, D] = fechaSeleccionada.split("-").map(Number);
+  const fechaSelSinHora = new Date(Y, M - 1, D);
+
+  // Si la fecha seleccionada es anterior a hoy → todo pasado
+  if (fechaSelSinHora < hoySinHora) return true;
+
+  // Si la fecha seleccionada es posterior a hoy → nada pasado
+  if (fechaSelSinHora > hoySinHora) return false;
+
+  // Acá: fechaSeleccionada es HOY
+  const [h, m] = hora.split(":").map(Number);
+  const slotMin = h * 60 + m;
+  const ahoraMin = ahora.getHours() * 60 + ahora.getMinutes();
+
+  // Si no hay config, hacemos comparación simple
+  if (!config || !config.hora_apertura || !config.hora_cierre) {
+    return slotMin <= ahoraMin;
+  }
+
+  // Detectar si la jornada cruza medianoche
+  const [hA, mA] = config.hora_apertura.split(":").map(Number);
+  const [hC, mC] = config.hora_cierre.split(":").map(Number);
+  const aperturaMin = hA * 60 + mA;
+  const cierreMin = hC * 60 + mC;
+
+  // Jornada NORMAL (no cruza medianoche) → comparación simple en el día
+  if (cierreMin > aperturaMin) {
+    return slotMin <= ahoraMin;
+  }
+
+  // Jornada que CRUZA medianoche (ej: 14:00 → 02:00)
+  // Los horarios con minutos < aperturaMin son de la "madrugada siguiente".
+  const slotEsMadrugada = slotMin < aperturaMin;
+
+  let slotComparacion = slotMin;
+  let ahoraComparacion = ahoraMin;
+
+  // Si el horario es de madrugada, lo llevamos al "día siguiente" sumando 24h
+  if (slotEsMadrugada) {
+    slotComparacion += 24 * 60;
+  }
+
+  // En el día de hoy, desde el punto de vista del usuario:
+  // - 14:00..23:59 se comparan normal
+  // - 00:00..01:59 (cuando config cruza medianoche) se consideran futuro
+  //   mientras no haya pasado el horario real.
+  return slotComparacion <= ahoraComparacion;
+};
+
 
   // Verifica si la hora está bloqueada por torneo/cierre
   const esBloqueado = (hora) => {
