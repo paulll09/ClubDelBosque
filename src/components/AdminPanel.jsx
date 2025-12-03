@@ -681,11 +681,6 @@ const nombreDia = (fechaStr) => {
                               <span className="text-[9px] opacity-80 truncate">
                                 {r.telefono_cliente || ""}
                                 {r.estado && ` · ${r.estado}`}
-                                {fechaEsDiferente && (
-                                  <span className="ml-1 text-[8px] uppercase opacity-80">
-                                    ({nombreDia(r.fecha)})
-                                  </span> 
-                                )}
                               </span>
                             </div>
                           </td>
