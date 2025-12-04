@@ -1,3 +1,4 @@
+// src/components/MisTurnos.jsx
 import React, { useEffect, useState } from "react";
 import Loader from "./Loader";
 
@@ -10,7 +11,7 @@ export default function MisTurnos({ usuario, apiUrl }) {
   const [loading, setLoading] = useState(true);
 
   // ---------------------------
-  // Helpers de fecha
+  // Helpers de fecha y hora
   // ---------------------------
   const esFuturoOHoy = (fechaStr, horaStr) => {
     if (!fechaStr) return false;
@@ -42,6 +43,13 @@ export default function MisTurnos({ usuario, apiUrl }) {
     };
   };
 
+  const formatearHora = (horaStr) => {
+    if (!horaStr) return "-";
+    const partes = horaStr.split(":"); // "14:00:00" -> ["14","00","00"]
+    const [h, m] = partes;
+    return `${h}:${m} hs`;
+  };
+
   // ---------------------------
   // Cargar turnos del backend
   // ---------------------------
@@ -56,7 +64,7 @@ export default function MisTurnos({ usuario, apiUrl }) {
       }
       const data = await res.json();
 
-      // Nos quedamos solo con las confirmadas y en el futuro
+      // Solo confirmadas y en el futuro
       const futurasConfirmadas = (data || [])
         .filter((t) => t.estado === "confirmada")
         .filter((t) => esFuturoOHoy(t.fecha, t.hora))
@@ -123,44 +131,55 @@ export default function MisTurnos({ usuario, apiUrl }) {
         <div className="space-y-3">
           {turnos.map((t) => {
             const { nombreDia, fechaCorta } = procesarFecha(t.fecha);
+            const horaFormateada = formatearHora(t.hora);
 
             return (
               <div
                 key={t.id}
-                className="flex items-center justify-between bg-slate-900/70 border border-slate-700 rounded-2xl px-4 py-3 shadow-md"
+                className="flex items-stretch gap-3 bg-slate-950/80 border border-slate-800 rounded-3xl px-4 py-3 shadow-lg"
               >
-                <div className="flex flex-col">
-                  <span className="text-sm text-slate-400">
-                    {nombreDia} · {fechaCorta}
+                {/* Columna izquierda: hora + cancha en formato destacado */}
+                <div className="flex flex-col items-center justify-center px-3 py-1.5 rounded-2xl bg-slate-900/80 border border-emerald-500/30 min-w-[84px]">
+                  <span className="text-sm font-semibold text-slate-50">
+                    {horaFormateada}
                   </span>
-                  <span className="text-lg font-semibold">
-                    {t.hora} hs · Cancha {t.id_cancha}
-                  </span>
-                  <span className="text-xs text-emerald-400 mt-1">
-                    Estado: Confirmada
+                  <span className="mt-1 text-[10px] font-semibold uppercase tracking-wide text-emerald-400">
+                    Cancha {t.id_cancha}
                   </span>
                 </div>
 
-                <button
-                  onClick={() => cancelarTurno(t.id)}
-                  className="ml-3 p-2 rounded-full border border-slate-700 hover:border-red-500/40 hover:bg-red-500/10 transition-colors"
-                  title="Cancelar turno"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-5 w-5"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
+                {/* Columna derecha: fecha + estado + botón */}
+                <div className="flex-1 flex items-center justify-between gap-3">
+                  <div className="flex flex-col">
+                    <span className="text-xs text-slate-400">
+                      {nombreDia} · {fechaCorta}
+                    </span>
+                    <span className="mt-1 text-xs font-semibold text-emerald-400">
+                      Estado: Confirmada
+                    </span>
+                  </div>
+
+                  <button
+                    onClick={() => cancelarTurno(t.id)}
+                    className="ml-1 flex items-center justify-center p-2 rounded-full border border-slate-700 hover:border-red-500/60 hover:bg-red-500/10 transition-colors"
+                    title="Cancelar turno"
                   >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={1.5}
-                      d="M6 18L18 6M6 6l12 12"
-                    />
-                  </svg>
-                </button>
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-4 w-4"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={1.7}
+                        d="M6 18L18 6M6 6l12 12"
+                      />
+                    </svg>
+                  </button>
+                </div>
               </div>
             );
           })}

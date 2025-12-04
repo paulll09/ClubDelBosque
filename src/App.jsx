@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { UserCircle2 } from "lucide-react";
 import { API_URL } from "./config";
 
 // Hooks y helpers
@@ -25,9 +26,9 @@ import FormularioCliente from "./components/FormularioCliente";
 
 // Canchas
 const CANCHAS = [
-  { id: "1", nombre: "Cancha 1", descripcion: "Cristal | Césped Pro" },
-  { id: "2", nombre: "Cancha 2", descripcion: "Cristal | Césped Pro" },
-  { id: "3", nombre: "Cancha 3", descripcion: "Muro | Césped Std" },
+  { id: "1", nombre: "Cancha 1", descripcion: "Blindex | Césped" },
+  { id: "2", nombre: "Cancha 2", descripcion: "Blindex | Césped" },
+  { id: "3", nombre: "Cancha 3", descripcion: "Muro | Césped" },
 ];
 
 export default function App() {
@@ -159,9 +160,9 @@ export default function App() {
   // Selección de horario
   const seleccionarHorario = (hora) => {
     if (!fechaSeleccionada)
-      return mostrarToast("📅 Seleccioná una fecha.", "warning");
+      return mostrarToast("Seleccioná una fecha.", "warning");
     if (esHorarioPasado(hora))
-      return mostrarToast("⏳ Ese horario ya pasó.", "warning");
+      return mostrarToast("Ese horario ya pasó.", "warning");
 
     if (!usuario) {
       setHoraSeleccionada(hora);
@@ -226,7 +227,7 @@ export default function App() {
       const json = await res.json();
 
       if (res.status === 409) {
-        mostrarToast("⚠️ Ese turno ya fue reservado.", "error");
+        mostrarToast("Ese turno ya fue reservado.", "error");
         recargarReservas();
         return;
       }
@@ -390,19 +391,20 @@ export default function App() {
               Bosque
             </span>
           </h1>
-
           {usuario ? (
-            <p className="text-sm text-emerald-300">
-              👋 ¡Hola, {usuario.nombre}!
-            </p>
+            <div className="mt-1 flex items-center gap-2 text-sm text-emerald-300">
+              <UserCircle2 size={18} className="text-emerald-300" />
+              <span>Hola, {usuario.nombre}.</span>
+            </div>
           ) : (
             <button
-              onClick={() => setMostrarLogin(true)}
+                onClick={() => setMostrarLogin(true)}
               className="text-xs bg-white/10 hover:bg-white/20 px-4 py-2 rounded-full border border-white/20 mt-3"
             >
               Iniciar Sesión / Registrarse
             </button>
           )}
+
         </div>
       </header>
 
