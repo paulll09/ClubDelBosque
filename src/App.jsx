@@ -70,15 +70,60 @@ const {
   // -----------------------------------
   // Reservas + bloqueos del día seleccionado
   // -----------------------------------
-  const {
-    reservas,
-    bloqueos,
-    cargandoReservas,
-    recargarReservas,
-    estaReservado,
-    esHorarioPasado,
-    esBloqueado,
-  } = useReservasCliente(API_URL, fechaSeleccionada, canchaSeleccionada);
+const {
+  reservas,
+  bloqueos,
+  cargandoReservas,
+  recargarReservas,
+  estaReservado,
+  esBloqueado,
+} = useReservasCliente(API_URL, fechaSeleccionada, canchaSeleccionada);
+
+  // Indica si la jornada del club cruza medianoche (ej: 14:00 → 02:00)
+  const cruzaMedianoche = (() => {
+    if (!config?.hora_apertura || !config?.hora_cierre) return false;
+    const [hA, mA] = config.hora_apertura.split(":").map(Number);
+    const [hC, mC] = config.hora_cierre.split(":").map(Number);
+    const inicio = hA * 60 + mA;
+    const fin = hC * 60 + mC;
+    return fin <= inicio;
+  })();
+
+  /**
+   * Determina si un horario ya pasó teniendo en cuenta:
+   *  - La fecha seleccionada
+   *  - La configuración del club (si cruza o no medianoche)
+   *
+   * Si la jornada cruza medianoche y la hora es menor a la hora de apertura,
+   * el turno pertenece al día siguiente.
+   */
+  const esHorarioPasado = (horaStr) => {
+    if (!fechaSeleccionada) return false;
+
+    const [year, month, day] = fechaSeleccionada.split("-").map(Number);
+    const [h, m] = horaStr.split(":").map(Number);
+
+    // Fecha base usando la fecha seleccionada
+    let fechaTurno = new Date(year, month - 1, day, h, m);
+
+    if (config?.hora_apertura && config?.hora_cierre && cruzaMedianoche) {
+      const [hA, mA] = config.hora_apertura.split(":").map(Number);
+      const aperturaMin = hA * 60 + mA;
+      const totalMinutos = h * 60 + m;
+
+      // Si el horario es antes de la hora de apertura, lo consideramos del día siguiente
+      if (totalMinutos < aperturaMin) {
+        const ajustada = new Date(fechaTurno);
+        ajustada.setDate(ajustada.getDate() + 1);
+        fechaTurno = ajustada;
+      }
+    }
+
+    const ahora = new Date();
+    return fechaTurno < ahora;
+  };
+
+
 
   // -----------------------------------
   // Toast
