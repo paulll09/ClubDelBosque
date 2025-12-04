@@ -5,6 +5,7 @@ import { API_URL } from "./config";
 import { useConfigClub } from "./hooks/useConfigClub";
 import { useReservasCliente } from "./hooks/useReservasCliente";
 import { formatearFechaLarga, getFechaHoy } from "./helpers/fecha";
+import { useUser } from "./context/UserContext";
 
 // UI
 import SelectorCancha from "./components/SelectorCancha";
@@ -22,64 +23,48 @@ import MisTurnos from "./components/MisTurnos";
 import Perfil from "./components/Perfil";
 import FormularioCliente from "./components/FormularioCliente";
 
-// Canchas (por ahora hardcodeado aquí)
+// Canchas
 const CANCHAS = [
   { id: "1", nombre: "Cancha 1", descripcion: "Cristal | Césped Pro" },
   { id: "2", nombre: "Cancha 2", descripcion: "Cristal | Césped Pro" },
   { id: "3", nombre: "Cancha 3", descripcion: "Muro | Césped Std" },
 ];
 
-/**
- * App principal - lado cliente (reservas).
- *
- * Responsabilidades:
- *  - Manejar selección de fecha, cancha y horario.
- *  - Coordinar login de cliente y flujo de Mercado Pago.
- *  - Pedir al backend:
- *      - Configuración pública del club (vía hook useConfigClub).
- *      - Reservas y bloqueos para la fecha/cancha (vía hook useReservasCliente).
- *  - Mostrar secciones: Reservar / Mis turnos / Perfil.
- */
 export default function App() {
   // Selección actual
   const [fechaSeleccionada, setFechaSeleccionada] = useState("");
   const [canchaSeleccionada, setCanchaSeleccionada] = useState("1");
   const [horaSeleccionada, setHoraSeleccionada] = useState("");
 
-  // Usuario / navegación
-  const [usuario, setUsuario] = useState(null);
+  // Navegación interna
   const [seccionActiva, setSeccionActiva] = useState("reservar"); // reservar | turnos | perfil
-  const [mostrarLogin, setMostrarLogin] = useState(false);
-  const [mostrarFormulario, setMostrarFormulario] = useState(false);
 
   // UI feedback
   const [toast, setToast] = useState(null);
   const [confirmModal, setConfirmModal] = useState(null);
 
-  // -----------------------------------
-  // Configuración global del club
-  // (horarios dinámicos, jornada que cruza medianoche, etc.)
-  // -----------------------------------
-const {
-  config,
-  horariosConfig,
-  cargandoConfig,
-  errorConfig,
-} = useConfigClub(API_URL);
+  // Usuario desde contexto
+  const { usuario, login, logout, mostrarLogin, setMostrarLogin } = useUser();
 
-  // -----------------------------------
-  // Reservas + bloqueos del día seleccionado
-  // -----------------------------------
-const {
-  reservas,
-  bloqueos,
-  cargandoReservas,
-  recargarReservas,
-  estaReservado,
-  esBloqueado,
-} = useReservasCliente(API_URL, fechaSeleccionada, canchaSeleccionada);
+  // Config del club
+  const {
+    config,
+    horariosConfig,
+    cargandoConfig,
+    errorConfig,
+  } = useConfigClub(API_URL);
 
-  // Indica si la jornada del club cruza medianoche (ej: 14:00 → 02:00)
+  // Reservas y bloqueos
+  const {
+    reservas,
+    bloqueos,
+    cargandoReservas,
+    recargarReservas,
+    estaReservado,
+    esBloqueado,
+  } = useReservasCliente(API_URL, fechaSeleccionada, canchaSeleccionada);
+
+  // Indica si la jornada cruza medianoche
   const cruzaMedianoche = (() => {
     if (!config?.hora_apertura || !config?.hora_cierre) return false;
     const [hA, mA] = config.hora_apertura.split(":").map(Number);
@@ -92,10 +77,10 @@ const {
   /**
    * Determina si un horario ya pasó teniendo en cuenta:
    *  - La fecha seleccionada
-   *  - La configuración del club (si cruza o no medianoche)
+   *  - Si la jornada cruza medianoche o no
    *
-   * Si la jornada cruza medianoche y la hora es menor a la hora de apertura,
-   * el turno pertenece al día siguiente.
+   * Si la jornada cruza medianoche y la hora es menor a la apertura,
+   * el turno corresponde al día siguiente.
    */
   const esHorarioPasado = (horaStr) => {
     if (!fechaSeleccionada) return false;
@@ -103,16 +88,14 @@ const {
     const [year, month, day] = fechaSeleccionada.split("-").map(Number);
     const [h, m] = horaStr.split(":").map(Number);
 
-    // Fecha base usando la fecha seleccionada
     let fechaTurno = new Date(year, month - 1, day, h, m);
 
-    if (config?.hora_apertura && config?.hora_cierre && cruzaMedianoche) {
+    if (config?.hora_apertura && cruzaMedianoche) {
       const [hA, mA] = config.hora_apertura.split(":").map(Number);
       const aperturaMin = hA * 60 + mA;
-      const totalMinutos = h * 60 + m;
+      const totalMin = h * 60 + m;
 
-      // Si el horario es antes de la hora de apertura, lo consideramos del día siguiente
-      if (totalMinutos < aperturaMin) {
+      if (totalMin < aperturaMin) {
         const ajustada = new Date(fechaTurno);
         ajustada.setDate(ajustada.getDate() + 1);
         fechaTurno = ajustada;
@@ -123,22 +106,13 @@ const {
     return fechaTurno < ahora;
   };
 
-
-
-  // -----------------------------------
   // Toast
-  // -----------------------------------
-  const mostrarToast = (msg, type = "info") => setToast({ message: msg, type });
+  const mostrarToast = (message, type = "info") =>
+    setToast({ message, type });
   const cerrarToast = () => setToast(null);
 
-  // -----------------------------------
-  // Manejo del retorno de Mercado Pago
-  // -----------------------------------
+  // Manejo de retorno de Mercado Pago
   useEffect(() => {
-    // Restaurar usuario desde localStorage
-    const u = localStorage.getItem("club_usuario");
-    if (u) setUsuario(JSON.parse(u));
-
     const params = new URLSearchParams(window.location.search);
     const estado = params.get("estado");
     const idReserva = params.get("id_reserva");
@@ -149,12 +123,11 @@ const {
       (estado === "failure" || estado === "error" || estado === "pending") &&
       idReserva
     ) {
-      // Cualquier cosa que NO sea éxito, lo tomamos como que NO se pagó
       liberarTurnoFallido(idReserva);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Confirma reserva pagada con éxito
   const confirmarPagoBackend = async (idReserva) => {
     try {
       await fetch(`${API_URL}/reservas/confirmar/${idReserva}`, {
@@ -166,13 +139,11 @@ const {
     } catch (err) {
       mostrarToast("Error confirmando el pago.", "error");
     } finally {
-      // Limpiar query params de Mercado Pago
       window.history.replaceState({}, document.title, "/");
       recargarReservas();
     }
   };
 
-  // Si la persona sale del pago → se cancela la reserva
   const liberarTurnoFallido = async (idReserva) => {
     try {
       await fetch(`${API_URL}/reservas/${idReserva}`, { method: "DELETE" });
@@ -185,9 +156,7 @@ const {
     }
   };
 
-  // -----------------------------------
   // Selección de horario
-  // -----------------------------------
   const seleccionarHorario = (hora) => {
     if (!fechaSeleccionada)
       return mostrarToast("📅 Seleccioná una fecha.", "warning");
@@ -210,17 +179,11 @@ const {
     });
   };
 
-  // -----------------------------------
-  // Cuando el usuario inicia sesión
-  // -----------------------------------
+  // Login exitoso
   const manejarLoginSuccess = (u) => {
-    setUsuario(u);
-    localStorage.setItem("club_usuario", JSON.stringify(u));
-    setMostrarLogin(false);
-
+    login(u); // va al contexto + localStorage
     mostrarToast(`¡Bienvenido, ${u.nombre}!`, "success");
 
-    // Si ya había elegido horario antes de loguearse, le damos la opción de seguir
     if (horaSeleccionada) {
       setConfirmModal({
         titulo: "Completar reserva",
@@ -233,9 +196,13 @@ const {
     }
   };
 
-  // -----------------------------------
-  // Confirmar reserva → crear preferencia en backend
-  // -----------------------------------
+  // Logout (usa el contexto)
+  const manejarLogout = () => {
+    logout();
+    setSeccionActiva("reservar");
+  };
+
+  // Crear reserva + MP
   const confirmarReserva = async (hora, user) => {
     const reserva = {
       id_cancha: canchaSeleccionada,
@@ -276,18 +243,7 @@ const {
     }
   };
 
-  // -----------------------------------
-  // Logout
-  // -----------------------------------
-  const manejarLogout = () => {
-    localStorage.removeItem("club_usuario");
-    setUsuario(null);
-    setSeccionActiva("reservar");
-  };
-
-  // -----------------------------------
-  // Render principal según sección
-  // -----------------------------------
+  // Render por sección
   const renderSeccion = () => {
     if (seccionActiva === "turnos") {
       return usuario ? (
@@ -420,13 +376,10 @@ const {
     );
   };
 
-  // -----------------------------------
-  // Render general
-  // -----------------------------------
   return (
     <div className="min-h-screen bg-slate-950 pb-24">
       <header className="relative bg-gradient-to-br from-emerald-900 via-slate-900 to-slate-950 pb-10 pt-8 rounded-b-[2.5rem] shadow-xl mb-8">
-        <div className="relative z-10 flex flex-col items-center textcenter">
+        <div className="relative z-10 flex flex-col items-center text-center">
           <WeatherWidget />
           <span className="text-xs font-bold tracking-widest text-emerald-400 uppercase mt-2">
             Sistema de Reservas
@@ -474,16 +427,6 @@ const {
         />
       )}
 
-      {mostrarFormulario && (
-        <FormularioCliente
-          fechaSeleccionada={fechaSeleccionada}
-          canchaSeleccionada={canchaSeleccionada}
-          horaSeleccionada={horaSeleccionada}
-          onConfirmar={confirmarReserva}
-          onCancelar={() => setMostrarFormulario(false)}
-        />
-      )}
-
       <BottomNav
         seccionActiva={seccionActiva}
         setSeccionActiva={(sec) => {
@@ -494,3 +437,4 @@ const {
     </div>
   );
 }
+
