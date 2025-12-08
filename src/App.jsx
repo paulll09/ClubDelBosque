@@ -226,14 +226,25 @@ export default function App() {
 
       const json = await res.json();
 
+      // Caso 409: reserva ya existe
       if (res.status === 409) {
-        mostrarToast("Ese turno ya fue reservado.", "error");
+        if (json.init_point) {
+          // El backend te devolvió la reserva pendiente existente
+          mostrarToast("Tenés una reserva pendiente. Redirigiendo al pago...", "warning");
+          window.location.href = json.init_point;
+          return;
+        }
+
+        // Si no hay init_point → es una confirmada de otro usuario
+        mostrarToast("Ese turno ya no está disponible.", "error");
         recargarReservas();
         return;
       }
 
+      // Caso normal
       if (!res.ok) throw new Error(json.mensaje || "Error creando reserva");
 
+      // Redirección a Mercado Pago
       if (json.init_point) {
         window.location.href = json.init_point;
       } else {
@@ -244,6 +255,7 @@ export default function App() {
     }
   };
 
+
   // Render por sección
   const renderSeccion = () => {
     if (seccionActiva === "turnos") {
@@ -252,7 +264,7 @@ export default function App() {
           usuario={usuario}
           apiUrl={API_URL}
           mostrarToast={mostrarToast}
-        />  
+        />
       ) : (
         <div className="text-center mt-10 text-slate-400">
           Iniciá sesión para ver tus turnos.
@@ -402,7 +414,7 @@ export default function App() {
             </div>
           ) : (
             <button
-                onClick={() => setMostrarLogin(true)}
+              onClick={() => setMostrarLogin(true)}
               className="text-xs bg-white/10 hover:bg-white/20 px-4 py-2 rounded-full border border-white/20 mt-3"
             >
               Iniciar Sesión / Registrarse
