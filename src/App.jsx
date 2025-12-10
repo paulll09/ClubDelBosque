@@ -33,7 +33,7 @@ const CANCHAS = [
 
 export default function App() {
   // Selección actual
-  const [fechaSeleccionada, setFechaSeleccionada] = useState("");
+  const [fechaSeleccionada, setFechaSeleccionada] = useState(getFechaHoy());
   const [canchaSeleccionada, setCanchaSeleccionada] = useState("1");
   const [horaSeleccionada, setHoraSeleccionada] = useState("");
 

@@ -34,7 +34,16 @@ export function useReservasCliente(
    * Carga reservas y bloqueos desde el backend.
    */
   const cargarReservasYBloqueos = useCallback(async () => {
-    if (!fechaSeleccionada || !canchaSeleccionada) return;
+    if (!fechaSeleccionada || !canchaSeleccionada) {
+      // Si por algún motivo llegan undefined, dejamos todo vacío
+      console.warn(
+        "useReservasCliente: fechaSeleccionada o canchaSeleccionada indefinidos",
+        { fechaSeleccionada, canchaSeleccionada }
+      );
+      setReservas([]);
+      setBloqueos([]);
+      return;
+    }
 
     try {
       setCargandoReservas(true);
@@ -50,6 +59,7 @@ export function useReservasCliente(
       setCargandoReservas(false);
     }
   }, [apiUrl, fechaSeleccionada, canchaSeleccionada]);
+
 
   /**
    * Recarga manual, por ejemplo luego de cancelar o crear reserva.
