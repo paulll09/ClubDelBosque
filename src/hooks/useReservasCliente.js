@@ -2,7 +2,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { obtenerReservasYBloqueos } from "../services/apiReservas";
 import {
-  getFechaHoy,
   esHorarioPasado as esHorarioPasadoHelper,
 } from "../helpers/fecha";
 
@@ -60,7 +59,6 @@ export function useReservasCliente(
     }
   }, [apiUrl, fechaSeleccionada, canchaSeleccionada]);
 
-
   /**
    * Recarga manual, por ejemplo luego de cancelar o crear reserva.
    */
@@ -72,13 +70,8 @@ export function useReservasCliente(
    * Efecto: carga inicial y cada vez que cambian fecha o cancha.
    */
   useEffect(() => {
-    if (!fechaSeleccionada || !canchaSeleccionada) {
-      console.warn("No se cargan reservas porque falta fecha o cancha.");
-      return;
-    }
-
-    cargarReservas();
-  }, [fecha, canchaId]);
+    cargarReservasYBloqueos();
+  }, [cargarReservasYBloqueos]);
 
   /**
    * Verifica si una hora está reservada para el usuario actual:
