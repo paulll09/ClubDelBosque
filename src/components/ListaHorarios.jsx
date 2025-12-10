@@ -1,100 +1,88 @@
 // src/components/ListaHorarios.jsx
 import React from "react";
 
+/**
+ * ListaHorarios
+ *
+ * Muestra los horarios disponibles/ocupados/bloqueados para una cancha y fecha.
+ *
+ * Props:
+ *  - horarios: array de strings "HH:MM"
+ *  - horaSeleccionada: string "HH:MM" (selección actual)
+ *  - estaReservado(hora): bool → true si está reservado (pendiente o confirmada)
+ *  - esHorarioPasado(hora): bool → true si es un horario en el pasado
+ *  - esBloqueado(hora): bool → true si está bloqueado por cierre/torneo
+ *  - seleccionarHorario(hora): callback al hacer click en un horario disponible
+ */
 export default function ListaHorarios({
   horarios,
-  fechaSeleccionada,
+  horaSeleccionada,
   estaReservado,
   esHorarioPasado,
   esBloqueado,
   seleccionarHorario,
 }) {
-  if (!fechaSeleccionada) {
+  if (!horarios || horarios.length === 0) {
     return (
-      <div className="text-center py-8 border-2 border-dashed border-slate-800 rounded-2xl bg-slate-900/30">
-        <div className="flex justify-center mb-3">
-          <svg
-            className="w-6 h-6 text-slate-400"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            fill="none"
-            strokeWidth="1.8"
-          >
-            <rect
-              x="3"
-              y="5"
-              width="18"
-              height="16"
-              rx="2"
-              ry="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-            <path
-              d="M16 3v4M8 3v4M3 10h18"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </div>
-        <p className="text-sm text-slate-400">
-          Seleccioná una fecha arriba
-          <br />
-          para ver los turnos.
-        </p>
+      <div className="mt-4 rounded-xl bg-emerald-950/40 border border-emerald-500/20 px-4 py-3 text-center text-emerald-100 text-sm">
+        No hay horarios configurados para este día.
       </div>
     );
   }
 
-  // Para calcular si hay pocos horarios disponibles y agrandar la grilla
-  const disponibilidadLibre = (h) => {
-    const reservado = estaReservado ? estaReservado(h) : false;
-    const bloqueado = esBloqueado ? esBloqueado(h) : false;
-    const pasado = esHorarioPasado ? esHorarioPasado(h) : false;
-    return !reservado && !bloqueado && !pasado;
-  };
-
-  const horariosDisponibles = horarios.filter(disponibilidadLibre);
-  const pocosHorarios = horariosDisponibles.length <= 3;
-  const claseGrid = pocosHorarios ? "grid-cols-2" : "grid-cols-3";
-
   return (
-    <div className={`grid ${claseGrid} gap-3`}>
-      {horarios.map((hora) => {
-        const reservado = estaReservado ? estaReservado(hora) : false;
-        const bloqueado = esBloqueado ? esBloqueado(hora) : false;
-        const pasado = esHorarioPasado ? esHorarioPasado(hora) : false;
+    <div className="mt-4 space-y-3">
+      <h3 className="text-sm font-medium text-emerald-100">
+        Horarios disponibles
+      </h3>
 
-        const deshabilitado = reservado || bloqueado || pasado;
-        const disponible = !deshabilitado;
+      <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+        {horarios.map((hora) => {
+          const reservado = estaReservado && estaReservado(hora);
+          const pasado = esHorarioPasado && esHorarioPasado(hora);
+          const bloqueado = esBloqueado && esBloqueado(hora);
 
-        return (
-          <button
-            key={hora}
-            type="button"
-            onClick={() => disponible && seleccionarHorario(hora)}
-            disabled={deshabilitado}
-            className={`
-              relative aspect-[4/3] rounded-xl border text-sm font-medium flex flex-col items-center justify-center gap-1
-              transition-all duration-200
-              ${
+          const deshabilitado = reservado || pasado || bloqueado;
+          const esSeleccionada = horaSeleccionada === hora;
+
+          let labelEstado = "";
+          if (reservado) labelEstado = "Ocupado";
+          else if (bloqueado) labelEstado = "Bloqueado";
+          else if (pasado) labelEstado = "Pasado";
+
+          return (
+            <button
+              key={hora}
+              type="button"
+              disabled={deshabilitado}
+              onClick={() => {
+                if (!deshabilitado) {
+                  seleccionarHorario(hora);
+                }
+              }}
+              className={[
+                "relative flex flex-col items-center justify-center rounded-xl border px-2 py-2 text-xs sm:text-sm transition-all duration-150",
+                "focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950",
                 deshabilitado
-                  ? "bg-slate-950/70 text-slate-500 border-slate-800 cursor-default"
-                  : "bg-slate-800 text-emerald-50 border-slate-700 hover:bg-emerald-600 hover:border-emerald-500 hover:shadow-lg hover:scale-105 active:scale-95"
-              }
-            `}
-          >
-            <span className="text-lg font-bold tracking-tight">{hora}</span>
-
-            {disponible && (
-              <span className="text-[9px] font-bold uppercase tracking-wider text-emerald-300/90">
-                Disponible
+                  ? "bg-slate-900/60 border-slate-700 text-slate-500 cursor-not-allowed"
+                  : esSeleccionada
+                  ? "bg-emerald-500/20 border-emerald-400 text-emerald-50 shadow-[0_0_0_1px_rgba(45,212,191,0.5)] scale-[1.03]"
+                  : "bg-slate-900/40 border-emerald-500/20 text-emerald-50 hover:border-emerald-400 hover:bg-emerald-500/10",
+              ].join(" ")}
+            >
+              <span className="font-semibold leading-none">
+                {hora} hs
               </span>
-            )}
-          </button>
-        );
-      })}
+
+              {labelEstado && (
+                <span className="mt-1 text-[0.65rem] uppercase tracking-wide font-semibold">
+                  {labelEstado}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }
-
