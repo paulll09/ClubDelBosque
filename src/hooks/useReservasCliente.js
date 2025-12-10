@@ -72,8 +72,13 @@ export function useReservasCliente(
    * Efecto: carga inicial y cada vez que cambian fecha o cancha.
    */
   useEffect(() => {
-    cargarReservasYBloqueos();
-  }, [cargarReservasYBloqueos]);
+    if (!fechaSeleccionada || !canchaSeleccionada) {
+      console.warn("No se cargan reservas porque falta fecha o cancha.");
+      return;
+    }
+
+    cargarReservas();
+  }, [fecha, canchaId]);
 
   /**
    * Verifica si una hora está reservada para el usuario actual:
