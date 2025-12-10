@@ -32,7 +32,6 @@ export function useReservasCliente(
    */
   const cargarReservasYBloqueos = useCallback(async () => {
     if (!fechaSeleccionada || !canchaSeleccionada) {
-      // Si por algún motivo llegan undefined, dejamos todo vacío
       console.warn(
         "useReservasCliente: fechaSeleccionada o canchaSeleccionada indefinidos",
         { fechaSeleccionada, canchaSeleccionada }
@@ -128,7 +127,12 @@ export function useReservasCliente(
   };
 
   /**
-   * Verifica si una hora está bloqueada por torneo/cierre parcial.
+   * Verifica si una hora está bloqueada por torneo/cierre parcial o total.
+   *
+   * Casos:
+   *  - Bloqueo de día completo: hora_desde y hora_hasta vienen null → bloquea todo el día.
+   *  - Bloqueo parcial: se evalúa el rango hora_desde/hora_hasta.
+   *  - Datos incompletos: por seguridad, se ignora ese bloqueo (no rompe el front).
    */
   const esBloqueado = (hora) => {
     if (!bloqueos || bloqueos.length === 0) return false;
@@ -138,8 +142,21 @@ export function useReservasCliente(
     const minutosHora = h * 60 + m;
 
     return bloqueos.some((b) => {
-      const [hDesde, mDesde] = b.hora_desde.split(":").map(Number);
-      const [hHasta, mHasta] = b.hora_hasta.split(":").map(Number);
+      const desde = b.hora_desde;
+      const hasta = b.hora_hasta;
+
+      // Bloqueo de día completo → bloquea todas las horas de ese día
+      if ((!desde || desde === "") && (!hasta || hasta === "")) {
+        return true;
+      }
+
+      // Datos incompletos → no bloquea nada para no romper la lógica
+      if (!desde || !hasta) {
+        return false;
+      }
+
+      const [hDesde, mDesde] = String(desde).split(":").map(Number);
+      const [hHasta, mHasta] = String(hasta).split(":").map(Number);
 
       const desdeMin = hDesde * 60 + mDesde;
       const hastaMin = hHasta * 60 + mHasta;
