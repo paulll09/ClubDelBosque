@@ -88,7 +88,7 @@ export default function ListaHorarios({
 
             {disponible && (
               <span className="text-[9px] font-bold uppercase tracking-wider text-emerald-300/90">
-                Disponible
+                Libre
               </span>
             )}
           </button>
