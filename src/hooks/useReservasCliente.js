@@ -119,52 +119,63 @@ export function useReservasCliente(apiUrl, fechaSeleccionada, canchaSeleccionada
    *  - bloqueos de día completo (tipo 'dia_completo' o campo dia_completo = 1)
    *  - bloqueos por rango [hora_desde, hora_hasta]
    */
-  const esBloqueado = (hora) => {
-    if (!hora) return false;
-    if (!Array.isArray(bloqueos) || bloqueos.length === 0) return false;
+// ¿Este horario está bloqueado por algún torneo/cierre/etc?
+const esBloqueado = (horaStr) => {
+  if (!bloqueos || bloqueos.length === 0) return false;
+  if (!fechaSeleccionada) return false;
 
-    const [hStr, mStr] = String(hora).slice(0, 5).split(":");
-    const minutosHora = parseInt(hStr, 10) * 60 + parseInt(mStr, 10);
+  const horaClienteMin = horaStrToMinutes(horaStr);
 
-    return bloqueos.some((b) => {
-      if (!b) return false;
-
-      const tipo = (b.tipo || "").toLowerCase();
-      const diaCompletoFlag =
-        b.dia_completo === 1 ||
-        b.dia_completo === "1" ||
-        tipo === "dia_completo" ||
-        tipo === "completo";
-
-      // Bloqueo de día completo
-      if (diaCompletoFlag) {
-        return true;
-      }
-
-      const desdeRaw =
-        b.hora_desde ||
-        b.desde_hora ||
-        b.desde ||
-        b.tramo_desde ||
-        null;
-      const hastaRaw =
-        b.hora_hasta ||
-        b.hasta_hora ||
-        b.hasta ||
-        b.tramo_hasta ||
-        null;
-
-      if (!desdeRaw || !hastaRaw) return false;
-
-      const [hd, md] = String(desdeRaw).slice(0, 5).split(":");
-      const [hh, mh] = String(hastaRaw).slice(0, 5).split(":");
-
-      const desdeMin = parseInt(hd, 10) * 60 + parseInt(md, 10);
-      const hastaMin = parseInt(hh, 10) * 60 + parseInt(mh, 10);
-
-      return minutosHora >= desdeMin && minutosHora <= hastaMin;
-    });
+  // Helper para convertir "HH:MM" o "HH:MM:SS" a minutos
+  const parseHoraToMinutes = (h) => {
+    if (!h) return null;
+    const partes = h.split(":").map(Number);
+    const HH = partes[0] ?? 0;
+    const MM = partes[1] ?? 0;
+    return HH * 60 + MM;
   };
+
+  const parseFecha = (f) => new Date(`${f}T00:00:00`);
+
+  return bloqueos.some((b) => {
+    // Filtro por rango de fecha del bloqueo
+    const fechaDesde = b.fecha_desde ? parseFecha(b.fecha_desde) : null;
+    const fechaHasta = b.fecha_hasta ? parseFecha(b.fecha_hasta) : null;
+    const fechaSel = parseFecha(fechaSeleccionada);
+
+    if (fechaDesde && fechaSel < fechaDesde) return false;
+    if (fechaHasta && fechaSel > fechaHasta) return false;
+
+    // -------- CASO: BLOQUEO DE DÍA COMPLETO --------
+    // Si no hay horas, es bloqueo de todo el día.
+    if (!b.hora_desde && !b.hora_hasta) {
+      return true;
+    }
+
+    
+    // 00:00:00 a 23:59:59 (o 23:59)
+    const desdeMin = parseHoraToMinutes(b.hora_desde);
+    const hastaMin = parseHoraToMinutes(b.hora_hasta);
+
+    if (
+      (desdeMin === 0 || desdeMin === null) &&
+      (hastaMin === 24 * 60 - 1 || hastaMin === 24 * 60 || hastaMin === null)
+    ) {
+      // Cubre todo el día
+      return true;
+    }
+
+    // -------- CASO: BLOQUEO PARCIAL --------
+    if (desdeMin !== null && hastaMin !== null) {
+      // Rango clásico dentro del mismo día
+      return horaClienteMin >= desdeMin && horaClienteMin < hastaMin;
+    }
+
+    
+    return false;
+  });
+};
+
 
   return {
     reservas,
