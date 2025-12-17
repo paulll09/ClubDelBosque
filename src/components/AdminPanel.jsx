@@ -38,6 +38,13 @@ export default function AdminPanel({ apiUrl, adminToken, onLogout }) {
   // Vista: lista o calendario
   const [vista, setVista] = useState("lista"); // "lista" | "calendario"
 
+  // ====== NUEVO: Reserva manual (admin) ======
+  const [manualCancha, setManualCancha] = useState("1");
+  const [manualHora, setManualHora] = useState("");
+  const [manualNombre, setManualNombre] = useState("");
+  const [manualTelefono, setManualTelefono] = useState("");
+  const [creandoManual, setCreandoManual] = useState(false);
+
   /**
    * Cargar configuración del club (para entender jornadas que cruzan medianoche).
    */
@@ -92,6 +99,62 @@ export default function AdminPanel({ apiUrl, adminToken, onLogout }) {
   useEffect(() => {
     cargarReservas();
   }, [fechaAdmin, adminToken]);
+
+  /**
+   * NUEVO: Crear reserva manual (admin) - confirmada, sin MP.
+   */
+  const crearReservaManual = async (e) => {
+    e.preventDefault();
+    if (!adminToken) return;
+
+    if (!fechaAdmin || !manualHora || !manualNombre.trim()) {
+      alert("Completá fecha, hora y nombre.");
+      return;
+    }
+
+    setCreandoManual(true);
+
+    try {
+      const payload = {
+        id_cancha: Number(manualCancha),
+        fecha: fechaAdmin,
+        hora: manualHora, // "HH:MM"
+        nombre_cliente: manualNombre.trim(),
+        telefono_cliente: manualTelefono.trim() || null,
+      };
+
+      const res = await fetch(`${apiUrl}/admin/reservas/manual`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Admin-Token": adminToken,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        alert(data.message || data.mensaje || "No se pudo crear la reserva manual.");
+        return;
+      }
+
+      alert(data.message || data.mensaje || "Reserva manual creada.");
+
+      // Limpiar campos (mantengo la cancha y la fecha para cargar varias rápido)
+      setManualHora("");
+      setManualNombre("");
+      setManualTelefono("");
+
+      // Refrescar reservas del día actual
+      cargarReservas();
+    } catch (error) {
+      console.error("Error creando reserva manual:", error);
+      alert("Error de conexión.");
+    } finally {
+      setCreandoManual(false);
+    }
+  };
 
   /**
    * Cancelar reserva (cambia estado a "cancelada").
@@ -217,6 +280,98 @@ export default function AdminPanel({ apiUrl, adminToken, onLogout }) {
         vista={vista}
         setVista={setVista}
       />
+
+      {/* ====== NUEVO: Form reserva manual ====== */}
+      <form
+        onSubmit={crearReservaManual}
+        className="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3"
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h3 className="text-sm font-semibold text-slate-100">
+              Crear reserva manual
+            </h3>
+            <p className="text-xs text-slate-400 mt-0.5">
+              Para reservas tomadas por teléfono / mostrador. Se crea como{" "}
+              <span className="text-slate-200 font-semibold">confirmada</span>.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={cargarReservas}
+            className="text-[11px] px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700"
+          >
+            Actualizar ↻
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label className="block text-xs font-semibold text-slate-300 mb-1">
+              Cancha
+            </label>
+            <select
+              value={manualCancha}
+              onChange={(e) => setManualCancha(e.target.value)}
+              className="w-full text-xs bg-slate-950 border border-slate-700 rounded-lg px-3 py-2"
+            >
+              <option value="1">Cancha 1</option>
+              <option value="2">Cancha 2</option>
+              <option value="3">Cancha 3</option>
+            </select>
+            <p className="text-[10px] text-slate-500 mt-1">
+              Fecha tomada de la barra superior:{" "}
+              <span className="text-slate-300">{fechaAdmin}</span>
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-300 mb-1">
+              Hora
+            </label>
+            <input
+              type="time"
+              value={manualHora}
+              onChange={(e) => setManualHora(e.target.value)}
+              className="w-full text-xs bg-slate-950 border border-slate-700 rounded-lg px-3 py-2"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-300 mb-1">
+              Nombre
+            </label>
+            <input
+              value={manualNombre}
+              onChange={(e) => setManualNombre(e.target.value)}
+              placeholder="Ej: Juan Perez"
+              className="w-full text-xs bg-slate-950 border border-slate-700 rounded-lg px-3 py-2"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-300 mb-1">
+              Teléfono (opcional)
+            </label>
+            <input
+              value={manualTelefono}
+              onChange={(e) => setManualTelefono(e.target.value)}
+              placeholder="Ej: 3794..."
+              className="w-full text-xs bg-slate-950 border border-slate-700 rounded-lg px-3 py-2"
+            />
+          </div>
+        </div>
+
+        <div className="flex justify-end">
+          <button
+            type="submit"
+            disabled={creandoManual}
+            className="px-4 py-2 text-xs font-semibold rounded-xl bg-emerald-500 hover:bg-emerald-600 disabled:opacity-60 disabled:cursor-not-allowed text-white transition-colors"
+          >
+            {creandoManual ? "Creando..." : "Crear reserva"}
+          </button>
+        </div>
+      </form>
 
       {vista === "lista" ? (
         <ListaReservasAdmin

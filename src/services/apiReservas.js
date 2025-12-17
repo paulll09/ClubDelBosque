@@ -77,28 +77,26 @@ export async function eliminarReserva(idReserva, apiUrl = API_URL) {
   return true;
 }
 
-export async function crearReservaManualAdmin(
-  reserva,
-  adminToken,
-  apiUrl = API_URL
-) {
+export async function crearReservaManualAdmin(apiUrl, adminToken, payload) {
   const res = await fetch(`${apiUrl}/admin/reservas/manual`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       "X-Admin-Token": adminToken,
     },
-    body: JSON.stringify(reserva),
+    body: JSON.stringify(payload),
   });
 
   const data = await res.json().catch(() => ({}));
 
   if (!res.ok) {
-    throw new Error(data.mensaje || "Error al crear reserva manual");
+    const msg = data.message || data.mensaje || "No se pudo crear la reserva manual.";
+    throw new Error(msg);
   }
 
   return data;
 }
+
 
 export async function obtenerBloqueosFijosAdmin(adminToken, apiUrl = API_URL) {
   const res = await fetch(`${apiUrl}/admin/bloqueos-fijos`, {
