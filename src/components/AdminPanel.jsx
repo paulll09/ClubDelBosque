@@ -120,7 +120,7 @@ export default function AdminPanel({ apiUrl, adminToken, onLogout }) {
         fecha: fechaAdmin,
         hora: manualHora, // "HH:MM"
         nombre_cliente: manualNombre.trim(),
-        telefono_cliente: manualTelefono.trim() || null,
+        telefono_cliente: manualTelefono.trim() || ""
       };
 
       const res = await fetch(`${apiUrl}/admin/reservas/manual`, {
