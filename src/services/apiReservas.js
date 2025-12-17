@@ -76,3 +76,64 @@ export async function eliminarReserva(idReserva, apiUrl = API_URL) {
 
   return true;
 }
+
+export async function crearReservaManualAdmin(
+  reserva,
+  adminToken,
+  apiUrl = API_URL
+) {
+  const res = await fetch(`${apiUrl}/admin/reservas/manual`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Admin-Token": adminToken,
+    },
+    body: JSON.stringify(reserva),
+  });
+
+  const data = await res.json().catch(() => ({}));
+
+  if (!res.ok) {
+    throw new Error(data.mensaje || "Error al crear reserva manual");
+  }
+
+  return data;
+}
+
+export async function obtenerBloqueosFijosAdmin(adminToken, apiUrl = API_URL) {
+  const res = await fetch(`${apiUrl}/admin/bloqueos-fijos`, {
+    headers: { "X-Admin-Token": adminToken },
+  });
+
+  const data = await res.json().catch(() => []);
+  if (!res.ok) throw new Error(data.mensaje || "No se pudieron cargar bloqueos fijos.");
+  return Array.isArray(data) ? data : [];
+}
+
+export async function crearBloqueoFijoAdmin(payload, adminToken, apiUrl = API_URL) {
+  const res = await fetch(`${apiUrl}/admin/bloqueos-fijos`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Admin-Token": adminToken,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.mensaje || "No se pudo crear el bloqueo fijo.");
+  return data;
+}
+
+export async function eliminarBloqueoFijoAdmin(id, adminToken, apiUrl = API_URL) {
+  const res = await fetch(`${apiUrl}/admin/bloqueos-fijos/${id}`, {
+    method: "DELETE",
+    headers: { "X-Admin-Token": adminToken },
+  });
+
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.mensaje || "No se pudo eliminar el bloqueo fijo.");
+  return data;
+}
+
+
