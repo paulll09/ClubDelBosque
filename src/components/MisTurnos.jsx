@@ -3,12 +3,12 @@ import React, { useEffect, useState } from "react";
 import Loader from "./Loader";
 import ModalConfirmacion from "./ModalConfirmacion";
 
-
-
-
 /**
  * Componente MisTurnos
  * Muestra las reservas confirmadas del usuario y permite cancelarlas.
+ *
+ * Soporta "grupos" (grupo_id) para reservas de 2 horas:
+ * - Si varias filas comparten grupo_id, se agrupan en una sola tarjeta.
  */
 export default function MisTurnos({ usuario, apiUrl, mostrarToast }) {
   const [turnos, setTurnos] = useState([]);
@@ -31,34 +31,54 @@ export default function MisTurnos({ usuario, apiUrl, mostrarToast }) {
   };
 
   const procesarFecha = (fechaStr) => {
-    if (!fechaStr) return { nombreDia: "-", fechaCorta: "-" };
+    if (!fechaStr)
+      return { diaSemana: "", dia: "", mes: "", anio: "" };
 
     const [anio, mes, dia] = fechaStr.split("-").map(Number);
-    const fechaObj = new Date(anio, mes - 1, dia);
+    const date = new Date(anio, mes - 1, dia);
 
-    const nombreDia = fechaObj.toLocaleDateString("es-AR", {
-      weekday: "long",
-    });
-
-    const fechaCorta = `${String(dia).padStart(2, "0")}/${String(
-      mes
-    ).padStart(2, "0")}/${anio}`;
+    const dias = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
+    const meses = [
+      "Enero",
+      "Febrero",
+      "Marzo",
+      "Abril",
+      "Mayo",
+      "Junio",
+      "Julio",
+      "Agosto",
+      "Septiembre",
+      "Octubre",
+      "Noviembre",
+      "Diciembre",
+    ];
 
     return {
-      nombreDia: nombreDia.charAt(0).toUpperCase() + nombreDia.slice(1),
-      fechaCorta,
+      diaSemana: dias[date.getDay()],
+      dia: String(dia).padStart(2, "0"),
+      mes: meses[mes - 1],
+      anio: String(anio),
     };
   };
 
-  const formatearHora = (horaStr) => {
-    if (!horaStr) return "-";
-    const partes = horaStr.split(":"); // "14:00:00" -> ["14","00","00"]
-    const [h, m] = partes;
-    return `${h}:${m} hs`;
+  const normalizarHora = (horaStr) => {
+    if (!horaStr) return "00:00";
+    // "18:00:00" -> "18:00"
+    const partes = horaStr.split(":");
+    return `${partes[0] || "00"}:${partes[1] || "00"}`;
+  };
+
+  const sumarHoras = (horaHHMM, horas) => {
+    const [h, m] = (horaHHMM || "00:00").split(":").map(Number);
+    const d = new Date(2000, 0, 1, h || 0, m || 0, 0);
+    d.setHours(d.getHours() + (horas || 0));
+    const hh = String(d.getHours()).padStart(2, "0");
+    const mm = String(d.getMinutes()).padStart(2, "0");
+    return `${hh}:${mm}`;
   };
 
   // -----------------------------------
-  // Cargar turnos del backend
+  // Cargar turnos
   // -----------------------------------
   const cargarTurnos = async () => {
     if (!usuario?.id) return;
@@ -66,22 +86,77 @@ export default function MisTurnos({ usuario, apiUrl, mostrarToast }) {
     setLoading(true);
     try {
       const res = await fetch(`${apiUrl}/reservas/usuario/${usuario.id}`);
-      if (!res.ok) {
-        throw new Error("Error al obtener las reservas");
-      }
+      if (!res.ok) throw new Error("Error al obtener las reservas");
 
       const data = await res.json();
 
-      // Solo confirmadas y en el futuro
-      const futurasConfirmadas = (data || [])
-        .filter((t) => t.estado === "confirmada")
-        .filter((t) => esFuturoOHoy(t.fecha, t.hora))
-        .sort((a, b) => {
-          if (a.fecha === b.fecha) return a.hora.localeCompare(b.hora);
-          return a.fecha.localeCompare(b.fecha);
-        });
+      // 1) Normalizar estado y quedarnos con confirmadas (robusto)
+      const confirmadas = (data || [])
+        .map((t) => {
+          const estadoNorm = String(t.estado || "")
+            .trim()
+            .toLowerCase();
+          const mpNorm = String(t.mp_status || "")
+            .trim()
+            .toLowerCase();
 
-      setTurnos(futurasConfirmadas);
+          const esConfirmada =
+            estadoNorm === "confirmada" || mpNorm === "approved";
+
+          return {
+            ...t,
+            __estadoNorm: estadoNorm,
+            __mpNorm: mpNorm,
+            __esConfirmada: esConfirmada,
+            __horaHHMM: normalizarHora(t.hora),
+          };
+        })
+        .filter((t) => t.__esConfirmada)
+        .filter((t) => esFuturoOHoy(t.fecha, t.__horaHHMM));
+
+      // 2) Agrupar por grupo_id (si existe) para que 2h aparezca como 1 tarjeta
+      const grupos = new Map();
+
+      for (const t of confirmadas) {
+        const key = t.grupo_id ? `g-${t.grupo_id}` : `i-${t.id}`;
+        if (!grupos.has(key)) grupos.set(key, []);
+        grupos.get(key).push(t);
+      }
+
+      const agrupados = Array.from(grupos.values()).map((items) => {
+        items.sort((a, b) => a.__horaHHMM.localeCompare(b.__horaHHMM));
+
+        const primero = items[0];
+        const ultimo = items[items.length - 1];
+
+        const horaDesde = primero.__horaHHMM;
+        const horaHasta = sumarHoras(ultimo.__horaHHMM, 1); // asumiendo turnos de 1h por fila
+
+        return {
+          idPrincipal: primero.id, // para cancelar (tu backend ya maneja grupo_id en cancelar si existe)
+          grupo_id: primero.grupo_id || null,
+          id_cancha: primero.id_cancha,
+          fecha: primero.fecha,
+          nombre_cliente: primero.nombre_cliente,
+          telefono_cliente: primero.telefono_cliente,
+          estado: "confirmada",
+          mp_status: "approved",
+          hora_desde: horaDesde,
+          hora_hasta: items.length > 1 ? horaHasta : null,
+          horas: items.map((x) => x.__horaHHMM),
+          cantidad_hs: items.length,
+        };
+      });
+
+      // 3) Ordenar por fecha y hora
+      agrupados.sort((a, b) => {
+        if (a.fecha === b.fecha) {
+          return a.hora_desde.localeCompare(b.hora_desde);
+        }
+        return a.fecha.localeCompare(b.fecha);
+      });
+
+      setTurnos(agrupados);
     } catch (e) {
       console.error(e);
       alert("No se pudieron cargar tus turnos.");
@@ -93,115 +168,108 @@ export default function MisTurnos({ usuario, apiUrl, mostrarToast }) {
   useEffect(() => {
     cargarTurnos();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [usuario]);
+  }, [usuario?.id]);
 
   // -----------------------------------
-  // Abrir modal de cancelación
+  // Cancelación
   // -----------------------------------
-  const abrirModalCancelacion = (turno) => {
-    const horaFormateada = formatearHora(turno.hora);
+  const abrirModalCancelacion = (t) => {
+    const rango =
+      t.cantidad_hs > 1 && t.hora_hasta
+        ? `${t.hora_desde} a ${t.hora_hasta}`
+        : `${t.hora_desde}`;
 
     setModalCancel({
-      id: turno.id,
+      id: t.idPrincipal,
       titulo: "Cancelar turno",
-      mensaje: `¿Querés cancelar el turno de las ${horaFormateada} en la cancha ${turno.id_cancha}?`,
+      mensaje: `¿Querés cancelar tu turno de la Cancha ${t.id_cancha} el ${t.fecha} (${rango} hs)?`,
     });
   };
 
-  // -----------------------------------
-  // Ejecutar cancelación (DELETE /reservas/{id})
-  // -----------------------------------
   const ejecutarCancelacion = async () => {
     if (!modalCancel?.id) return;
 
     try {
-      const res = await fetch(`${apiUrl}/reservas/${modalCancel.id}`, {
-        method: "DELETE",
+      const res = await fetch(`${apiUrl}/reservas/cancelar/${modalCancel.id}`, {
+        method: "POST",
       });
 
-        if (!res.ok) {
-        throw new Error("Error al cancelar turno");
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        mostrarToast?.(data.message || "No se pudo cancelar.", "error");
+        return;
       }
 
-      mostrarToast("Turno cancelado correctamente.", "success");
+      mostrarToast?.("Turno cancelado correctamente.", "success");
+      setModalCancel(null);
       cargarTurnos();
-  } catch (e) {
-    console.error(e);
-    mostrarToast("No se pudo cancelar el turno.", "error");
-  } finally {
-    setModalCancel(null);
-  }
-};
-
+    } catch (e) {
+      console.error(e);
+      mostrarToast?.("Error de conexión al cancelar.", "error");
+    }
+  };
 
   // -----------------------------------
   // Render
   // -----------------------------------
   return (
-    <div className="p-4 pb-24 max-w-lg mx-auto text-slate-50">
-      <h2 className="text-xl font-semibold mb-4 text-center">
-        Mis próximos turnos
-      </h2>
+    <div className="w-full">
+      <div className="mb-3">
+        <h2 className="text-lg font-bold text-white">Mis turnos</h2>
+        <p className="text-xs text-slate-400">
+          Acá vas a ver tus reservas confirmadas.
+        </p>
+      </div>
 
       {loading ? (
-        <div className="mt-8 flex justify-center">
+        <div className="py-10">
           <Loader />
         </div>
       ) : turnos.length === 0 ? (
-        <p className="text-center text-slate-400 mt-8">
-          No tenés turnos confirmados próximos.
+        <p className="text-sm text-center text-slate-400 mt-8">
+          No tenés turnos confirmados.
         </p>
       ) : (
         <div className="space-y-3">
           {turnos.map((t) => {
-            const { nombreDia, fechaCorta } = procesarFecha(t.fecha);
-            const horaFormateada = formatearHora(t.hora);
+            const f = procesarFecha(t.fecha);
+            const rango =
+              t.cantidad_hs > 1 && t.hora_hasta
+                ? `${t.hora_desde} a ${t.hora_hasta}`
+                : `${t.hora_desde}`;
 
             return (
               <div
-                key={t.id}
-                className="flex items-stretch gap-3 bg-slate-950/80 border border-slate-800 rounded-3xl px-4 py-3 shadow-lg"
+                key={t.grupo_id ? `g-${t.grupo_id}` : `i-${t.idPrincipal}`}
+                className="bg-slate-900 border border-slate-800 rounded-2xl p-4"
               >
-                {/* Columna izquierda: hora + cancha en formato destacado */}
-                <div className="flex flex-col items-center justify-center px-3 py-1.5 rounded-2xl bg-slate-900/80 border border-emerald-500/30 min-w-[84px]">
-                  <span className="text-sm font-semibold text-slate-50">
-                    {horaFormateada}
-                  </span>
-                  <span className="mt-1 text-[10px] font-semibold uppercase tracking-wide text-emerald-400">
-                    Cancha {t.id_cancha}
-                  </span>
-                </div>
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-xs text-slate-400">
+                      {f.diaSemana} {f.dia} {f.mes} {f.anio}
+                    </p>
+                    <p className="text-base font-bold text-white">
+                      Cancha {t.id_cancha} · {rango} hs
+                    </p>
 
-                {/* Columna derecha: fecha + estado + botón */}
-                <div className="flex-1 flex items-center justify-between gap-3">
-                  <div className="flex flex-col">
-                    <span className="text-xs text-slate-400">
-                      {nombreDia} · {fechaCorta}
-                    </span>
-                    <span className="mt-1 text-xs font-semibold text-emerald-400">
-                      Estado: Confirmada
-                    </span>
+                    <div className="mt-1 flex items-center gap-2">
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-900/20 text-emerald-300 border border-emerald-500/20 font-semibold uppercase">
+                        Confirmada
+                      </span>
+                      {t.cantidad_hs > 1 && (
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-900/20 text-indigo-300 border border-indigo-500/20 font-semibold uppercase">
+                          {t.cantidad_hs} horas
+                        </span>
+                      )}
+                    </div>
                   </div>
 
                   <button
                     onClick={() => abrirModalCancelacion(t)}
-                    className="ml-1 flex items-center justify-center p-2 rounded-full border border-slate-700 hover:border-red-500/60 hover:bg-red-500/10 transition-colors"
-                    title="Cancelar turno"
+                    className="text-[11px] px-2 py-1 rounded-lg bg-red-900/20 hover:bg-red-900/40 text-red-400 border border-red-500/30"
                   >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-4 w-4"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={1.7}
-                        d="M6 18L18 6M6 6l12 12"
-                      />
-                    </svg>
+                    Cancelar
                   </button>
                 </div>
               </div>
