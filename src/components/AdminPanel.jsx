@@ -44,7 +44,7 @@ export default function AdminPanel({ apiUrl, adminToken, onLogout }) {
   const [manualNombre, setManualNombre] = useState("");
   const [manualTelefono, setManualTelefono] = useState("");
   const [creandoManual, setCreandoManual] = useState(false);
-
+  const [bloqueosFijos, setBloqueosFijos] = useState([]);
   /**
    * Cargar configuración del club (para entender jornadas que cruzan medianoche).
    */
@@ -62,6 +62,22 @@ export default function AdminPanel({ apiUrl, adminToken, onLogout }) {
 
     cargarConfig();
   }, [apiUrl]);
+
+  const cargarBloqueosFijos = async () => {
+    if (!adminToken) return;
+
+    const res = await fetch(`${apiUrl}/admin/bloqueos-fijos`, {
+      headers: { "X-Admin-Token": adminToken },
+    });
+
+    const data = await res.json().catch(() => []);
+    if (res.ok) setBloqueosFijos(Array.isArray(data) ? data : []);
+  };
+
+  useEffect(() => {
+    if (!adminToken) return;
+    cargarBloqueosFijos();
+  }, [adminToken]);
 
   /**
    * Cargar reservas del backend para la fecha seleccionada.
@@ -382,6 +398,7 @@ export default function AdminPanel({ apiUrl, adminToken, onLogout }) {
           reservas={reservasVisibles}
           fechaAdmin={fechaAdmin}
           configClub={configClub}
+          bloqueosFijos={bloqueosFijos}
         />
       )}
     </div>
