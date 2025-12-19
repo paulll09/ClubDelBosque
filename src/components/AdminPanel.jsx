@@ -379,9 +379,11 @@ export default function AdminPanel({ apiUrl, adminToken, onLogout }) {
         />
       ) : (
         <CalendarioAdmin
-          reservas={reservasVisibles}
+          reservas={reservasFiltradas}
           fechaAdmin={fechaAdmin}
           configClub={configClub}
+          apiUrl={apiUrl}
+          adminToken={adminToken}
         />
       )}
     </div>
