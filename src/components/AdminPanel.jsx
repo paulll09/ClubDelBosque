@@ -2,9 +2,10 @@ import React, { useState, useEffect, useMemo } from "react";
 import EncabezadoAdmin from "./admin/EncabezadoAdmin";
 import BarraFechaAdmin from "./admin/BarraFechaAdmin";
 import EstadisticasAdmin from "./admin/EstadisticasAdmin";
-import FiltrosAdmin from "./admin/FiltrosAdmin";
-import ListaReservasAdmin from "./admin/ListaReservasAdmin";
 import CalendarioAdmin from "./admin/CalendarioAdmin";
+import AdminTarifasHorarias from "./AdminTarifasHorarias";
+import AdminSeniasHorarias from "./AdminSeniasHorarias";
+
 
 /**
  * Panel administrativo.
@@ -30,21 +31,24 @@ export default function AdminPanel({ apiUrl, adminToken, onLogout }) {
   // Configuración del club (hora_apertura, hora_cierre, etc.)
   const [configClub, setConfigClub] = useState(null);
 
-  // Filtros avanzados
-  const [filtroEstado, setFiltroEstado] = useState("todas"); // todas | activas | confirmadas | canceladas
-  const [filtroCancha, setFiltroCancha] = useState("todas"); // todas | 1 | 2 | 3 ...
-  const [busqueda, setBusqueda] = useState(""); // nombre / teléfono
-
-  // Vista: lista o calendario
-  const [vista, setVista] = useState("lista"); // "lista" | "calendario"
 
   // ====== NUEVO: Reserva manual (admin) ======
   const [manualCancha, setManualCancha] = useState("1");
-  const [manualHora, setManualHora] = useState("");
+  const [manualHoraDesde, setManualHoraDesde] = useState("");
+  const [manualHoraHasta, setManualHoraHasta] = useState("");
   const [manualNombre, setManualNombre] = useState("");
   const [manualTelefono, setManualTelefono] = useState("");
   const [creandoManual, setCreandoManual] = useState(false);
+
+
   const [bloqueosFijos, setBloqueosFijos] = useState([]);
+
+  const [eliminandoIds, setEliminandoIds] = useState(new Set());
+
+  const [vistaAdmin, setVistaAdmin] = useState("calendario");
+  // posibles valores: "calendario" | "tarifas"
+
+
   /**
    * Cargar configuración del club (para entender jornadas que cruzan medianoche).
    */
@@ -123,8 +127,19 @@ export default function AdminPanel({ apiUrl, adminToken, onLogout }) {
     e.preventDefault();
     if (!adminToken) return;
 
-    if (!fechaAdmin || !manualHora || !manualNombre.trim()) {
-      alert("Completá fecha, hora y nombre.");
+    if (
+      !fechaAdmin ||
+      !manualHoraDesde ||
+      !manualHoraHasta ||
+      !manualNombre.trim()
+    ) {
+      alert("Completá fecha, hora desde, hora hasta y nombre.");
+      return;
+    }
+
+    // Validación básica en front: hasta > desde
+    if (manualHoraHasta <= manualHoraDesde) {
+      alert("La hora 'hasta' debe ser mayor que la hora 'desde'.");
       return;
     }
 
@@ -134,9 +149,10 @@ export default function AdminPanel({ apiUrl, adminToken, onLogout }) {
       const payload = {
         id_cancha: Number(manualCancha),
         fecha: fechaAdmin,
-        hora: manualHora, // "HH:MM"
+        hora_desde: manualHoraDesde, // "HH:MM"
+        hora_hasta: manualHoraHasta, // "HH:MM"
         nombre_cliente: manualNombre.trim(),
-        telefono_cliente: manualTelefono.trim() || ""
+        telefono_cliente: manualTelefono.trim() || "-", // <- importante
       };
 
       const res = await fetch(`${apiUrl}/admin/reservas/manual`, {
@@ -151,14 +167,20 @@ export default function AdminPanel({ apiUrl, adminToken, onLogout }) {
       const data = await res.json().catch(() => ({}));
 
       if (!res.ok) {
-        alert(data.message || data.mensaje || "No se pudo crear la reserva manual.");
+        alert(
+          data.message || data.mensaje || "No se pudo crear la reserva manual."
+        );
         return;
       }
 
-      alert(data.message || data.mensaje || "Reserva manual creada.");
+      alert(
+        data.message ||
+        `Reserva manual creada (${data.cantidad_hs || "?"} hs).`
+      );
 
-      // Limpiar campos (mantengo la cancha y la fecha para cargar varias rápido)
-      setManualHora("");
+      // Limpiar campos (mantengo cancha y fecha)
+      setManualHoraDesde("");
+      setManualHoraHasta("");
       setManualNombre("");
       setManualTelefono("");
 
@@ -200,28 +222,32 @@ export default function AdminPanel({ apiUrl, adminToken, onLogout }) {
    * Eliminar reserva de forma permanente.
    */
   const eliminarReserva = async (id) => {
-    if (
-      !window.confirm(
-        "¿Borrar permanentemente? Esta acción no se puede deshacer."
-      )
-    )
-      return;
+    if (!window.confirm("¿Borrar permanentemente? Esta acción no se puede deshacer.")) return;
+
+    // Evita doble click / doble request
+    if (eliminandoIds.has(id)) return;
+    setEliminandoIds(prev => new Set(prev).add(id));
 
     try {
       const res = await fetch(`${apiUrl}/reservas/${id}`, {
         method: "DELETE",
-        headers: {
-          "X-Admin-Token": adminToken,
-        },
+        headers: { "X-Admin-Token": adminToken },
       });
 
-      if (res.ok) {
-        setReservas((prev) => prev.filter((r) => r.id !== id));
+      //Si da 404, considerarlo OK (ya no existe)
+      if (res.ok || res.status === 404) {
+        setReservas(prev => prev.filter(r => r.id !== id));
       } else {
         alert("No se pudo eliminar la reserva.");
       }
-    } catch (error) {
+    } catch (e) {
       alert("Error de conexión.");
+    } finally {
+      setEliminandoIds(prev => {
+        const n = new Set(prev);
+        n.delete(id);
+        return n;
+      });
     }
   };
 
@@ -246,161 +272,207 @@ export default function AdminPanel({ apiUrl, adminToken, onLogout }) {
   /**
    * Aplicar filtros avanzados sobre la lista de reservas.
    */
-  const reservasVisibles = reservas.filter((r) => {
-    // Filtro por estado
-    if (filtroEstado === "activas" && r.estado === "cancelada") return false;
-    if (filtroEstado === "confirmadas" && r.estado !== "confirmada")
-      return false;
-    if (filtroEstado === "canceladas" && r.estado !== "cancelada") return false;
+  const reservasVisibles = reservas;
 
-    // Filtro por cancha
-    if (filtroCancha !== "todas" && String(r.id_cancha) !== filtroCancha) {
-      return false;
-    }
+    return (
+  <div
+    className={`animate-fadeIn space-y-6 pb-16 w-full mx-auto px-2 sm:px-4 ${
+      vistaAdmin === "tarifas" ? "max-w-7xl" : "max-w-3xl"
+    }`}
+  >
+    <EncabezadoAdmin onLogout={onLogout} />
 
-    // Búsqueda por nombre o teléfono
-    if (busqueda.trim() !== "") {
-      const texto = busqueda.toLowerCase();
-      const nombre = (r.nombre_cliente || "").toLowerCase();
-      const telefono = (r.telefono_cliente || "").toLowerCase();
-      if (!nombre.includes(texto) && !telefono.includes(texto)) {
-        return false;
-      }
-    }
-
-    return true;
-  });
-
-  return (
-    <div className="animate-fadeIn space-y-6 pb-16 w-full max-w-3xl mx-auto">
-      <EncabezadoAdmin onLogout={onLogout} />
-
-      <BarraFechaAdmin
-        fechaAdmin={fechaAdmin}
-        onFechaChange={setFechaAdmin}
-        cargando={cargando}
-        onRefrescar={cargarReservas}
-      />
-
-      <EstadisticasAdmin estadisticas={estadisticas} />
-
-      <FiltrosAdmin
-        filtroEstado={filtroEstado}
-        setFiltroEstado={setFiltroEstado}
-        filtroCancha={filtroCancha}
-        setFiltroCancha={setFiltroCancha}
-        busqueda={busqueda}
-        setBusqueda={setBusqueda}
-        vista={vista}
-        setVista={setVista}
-      />
-
-      {/* ====== NUEVO: Form reserva manual ====== */}
-      <form
-        onSubmit={crearReservaManual}
-        className="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3"
+    {/* Tabs */}
+    <div className="flex gap-2 px-2">
+      <button
+        type="button"
+        onClick={() => setVistaAdmin("calendario")}
+        className={`px-3 py-1 rounded-lg text-xs font-semibold ${
+          vistaAdmin === "calendario"
+            ? "bg-emerald-500 text-white"
+            : "bg-slate-800 text-slate-300 hover:bg-slate-700"
+        }`}
       >
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <h3 className="text-sm font-semibold text-slate-100">
-              Crear reserva manual
-            </h3>
-            <p className="text-xs text-slate-400 mt-0.5">
-              Para reservas tomadas por teléfono / mostrador. Se crea como{" "}
-              <span className="text-slate-200 font-semibold">confirmada</span>.
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={cargarReservas}
-            className="text-[11px] px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700"
-          >
-            Actualizar ↻
-          </button>
-        </div>
+        Calendario
+      </button>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1">
-              Cancha
-            </label>
-            <select
-              value={manualCancha}
-              onChange={(e) => setManualCancha(e.target.value)}
-              className="w-full text-xs bg-slate-950 border border-slate-700 rounded-lg px-3 py-2"
-            >
-              <option value="1">Cancha 1</option>
-              <option value="2">Cancha 2</option>
-              <option value="3">Cancha 3</option>
-            </select>
-            <p className="text-[10px] text-slate-500 mt-1">
-              Fecha tomada de la barra superior:{" "}
-              <span className="text-slate-300">{fechaAdmin}</span>
-            </p>
-          </div>
+      <button
+        type="button"
+        onClick={() => setVistaAdmin("tarifas")}
+        className={`px-3 py-1 rounded-lg text-xs font-semibold ${
+          vistaAdmin === "tarifas"
+            ? "bg-emerald-500 text-white"
+            : "bg-slate-800 text-slate-300 hover:bg-slate-700"
+        }`}
+      >
+        Tarifas
+      </button>
 
-          <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1">
-              Hora
-            </label>
-            <input
-              type="time"
-              value={manualHora}
-              onChange={(e) => setManualHora(e.target.value)}
-              className="w-full text-xs bg-slate-950 border border-slate-700 rounded-lg px-3 py-2"
-            />
-          </div>
+      <button
+        type="button"
+        onClick={() => setVistaAdmin("senias")}
+        className={`px-3 py-1 rounded-lg text-xs font-semibold ${
+          vistaAdmin === "senias"
+            ? "bg-emerald-500 text-white"
+            : "bg-slate-800 text-slate-300 hover:bg-slate-700"
+        }`}
+      >
+        Señas
+      </button>
 
-          <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1">
-              Nombre
-            </label>
-            <input
-              value={manualNombre}
-              onChange={(e) => setManualNombre(e.target.value)}
-              placeholder="Ej: Juan Perez"
-              className="w-full text-xs bg-slate-950 border border-slate-700 rounded-lg px-3 py-2"
-            />
-          </div>
+    </div>
 
-          <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1">
-              Teléfono (opcional)
-            </label>
-            <input
-              value={manualTelefono}
-              onChange={(e) => setManualTelefono(e.target.value)}
-              placeholder="Ej: 3794..."
-              className="w-full text-xs bg-slate-950 border border-slate-700 rounded-lg px-3 py-2"
-            />
-          </div>
-        </div>
-
-        <div className="flex justify-end">
-          <button
-            type="submit"
-            disabled={creandoManual}
-            className="px-4 py-2 text-xs font-semibold rounded-xl bg-emerald-500 hover:bg-emerald-600 disabled:opacity-60 disabled:cursor-not-allowed text-white transition-colors"
-          >
-            {creandoManual ? "Creando..." : "Crear reserva"}
-          </button>
-        </div>
-      </form>
-
-      {vista === "lista" ? (
-        <ListaReservasAdmin
-          reservas={reservasVisibles}
-          onCancelar={cancelarReserva}
-          onEliminar={eliminarReserva}
+    {/* ===================== */}
+    {/* VISTA: CALENDARIO */}
+    {/* ===================== */}
+    {vistaAdmin === "calendario" && (
+      <>
+        <BarraFechaAdmin
+          fechaAdmin={fechaAdmin}
+          onFechaChange={setFechaAdmin}
+          cargando={cargando}
+          onRefrescar={cargarReservas}
         />
-      ) : (
+
+        <EstadisticasAdmin estadisticas={estadisticas} />
+
+        {/* ====== Form reserva manual (desde / hasta) ====== */}
+        <form
+          onSubmit={crearReservaManual}
+          className="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-4"
+        >
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h3 className="text-sm font-semibold text-slate-100">
+                Crear reserva manual
+              </h3>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Para reservas por teléfono/mostrador. Se crea como{" "}
+                <span className="text-slate-200 font-semibold">confirmada</span>.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={cargarReservas}
+              className="text-[11px] px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700"
+            >
+              Actualizar ↻
+            </button>
+          </div>
+
+          {/* Fila 1: Cancha + Desde + Hasta */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 mb-1">
+                Cancha
+              </label>
+              <select
+                value={manualCancha}
+                onChange={(e) => setManualCancha(e.target.value)}
+                className="w-full text-xs bg-slate-950 border border-slate-700 rounded-lg px-3 py-2"
+              >
+                <option value="1">Cancha 1</option>
+                <option value="2">Cancha 2</option>
+                <option value="3">Cancha 3</option>
+              </select>
+              <p className="text-[10px] text-slate-500 mt-1">
+                Fecha: <span className="text-slate-300">{fechaAdmin}</span>
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 mb-1">
+                Hora desde
+              </label>
+              <input
+                type="time"
+                value={manualHoraDesde}
+                onChange={(e) => setManualHoraDesde(e.target.value)}
+                className="w-full text-xs bg-slate-950 border border-slate-700 rounded-lg px-3 py-2"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 mb-1">
+                Hora hasta
+              </label>
+              <input
+                type="time"
+                value={manualHoraHasta}
+                onChange={(e) => setManualHoraHasta(e.target.value)}
+                className="w-full text-xs bg-slate-950 border border-slate-700 rounded-lg px-3 py-2"
+              />
+              <p className="text-[10px] text-slate-500 mt-1">
+                Ej: 20:00 a 22:00 crea 20:00 y 21:00
+              </p>
+            </div>
+          </div>
+
+          {/* Fila 2: Nombre + Teléfono */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 mb-1">
+                Nombre
+              </label>
+              <input
+                value={manualNombre}
+                onChange={(e) => setManualNombre(e.target.value)}
+                placeholder="Ej: Juan Perez"
+                className="w-full text-xs bg-slate-950 border border-slate-700 rounded-lg px-3 py-2"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 mb-1">
+                Teléfono (opcional)
+              </label>
+              <input
+                value={manualTelefono}
+                onChange={(e) => setManualTelefono(e.target.value)}
+                placeholder="Ej: 3794..."
+                className="w-full text-xs bg-slate-950 border border-slate-700 rounded-lg px-3 py-2"
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-end">
+            <button
+              type="submit"
+              disabled={creandoManual}
+              className="px-4 py-2 text-xs font-semibold rounded-xl bg-emerald-500 hover:bg-emerald-600 disabled:opacity-60 disabled:cursor-not-allowed text-white transition-colors"
+            >
+              {creandoManual ? "Creando..." : "Crear reserva"}
+            </button>
+          </div>
+        </form>
+
+        {/* SOLO CALENDARIO (sin lista) */}
         <CalendarioAdmin
           reservas={reservasVisibles}
           fechaAdmin={fechaAdmin}
           configClub={configClub}
           bloqueosFijos={bloqueosFijos}
+          onCancelar={cancelarReserva}
+          onEliminar={eliminarReserva}
         />
-      )}
-    </div>
-  );
+      </>
+    )}
+
+    {/* ===================== */}
+    {/* VISTA: TARIFAS */}
+    {/* ===================== */}
+    {vistaAdmin === "tarifas" && (
+      <AdminTarifasHorarias apiUrl={apiUrl} adminToken={adminToken} />
+    )}
+
+    {/* ===================== */}
+    {/* VISTA: SENIAS */}
+    {/* ===================== */}
+    {vistaAdmin === "senias" && (
+      <AdminSeniasHorarias apiUrl={apiUrl} adminToken={adminToken} />
+    )}
+  </div>
+);
+
 }

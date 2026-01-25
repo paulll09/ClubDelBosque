@@ -3,7 +3,7 @@ import React, { useState } from "react";
 export default function LoginCliente({ onLoginSuccess, onCancelar, apiUrl }) {
   const [esRegistro, setEsRegistro] = useState(false);
 
-  // 🔥 Campos adaptados al backend
+  // Campos adaptados al backend
   const [form, setForm] = useState({
     nombre_cliente: "",
     telefono_cliente: "",
@@ -47,7 +47,7 @@ export default function LoginCliente({ onLoginSuccess, onCancelar, apiUrl }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
 
-        // 🔥 Enviamos EXACTAMENTE lo que el backend necesita
+        // Enviamos EXACTAMENTE lo que el backend necesita
         body: JSON.stringify(form),
       });
 
@@ -128,6 +128,18 @@ export default function LoginCliente({ onLoginSuccess, onCancelar, apiUrl }) {
             onChange={handleChange}
             className="w-full p-3 bg-slate-800 rounded-xl text-white border border-slate-700 focus:border-emerald-500 placeholder-slate-500 text-sm"
           />
+
+          {/* Link de recuperación (solo en login, no en registro) */}
+          {!esRegistro && (
+            <div className="text-right">
+              <a
+                href="/forgot-password"
+                className="text-xs text-slate-400 hover:text-emerald-300 transition-colors"
+              >
+                ¿Olvidaste tu contraseña?
+              </a>
+            </div>
+          )}
 
           <button
             type="submit"

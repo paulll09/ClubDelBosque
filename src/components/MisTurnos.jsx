@@ -2,40 +2,71 @@
 import React, { useEffect, useState } from "react";
 import Loader from "./Loader";
 import ModalConfirmacion from "./ModalConfirmacion";
+import MisTurnosSkeleton from "./MisTurnosSkeleton";
+
+import {
+  CalendarDays,
+  Clock,
+  BadgeCheck,
+  Hourglass,
+  CreditCard,
+  XCircle,
+  Receipt,
+} from "lucide-react";
 
 /**
- * Componente MisTurnos
- * Muestra las reservas confirmadas del usuario y permite cancelarlas.
- *
- * Soporta "grupos" (grupo_id) para reservas de 2 horas:
- * - Si varias filas comparten grupo_id, se agrupan en una sola tarjeta.
+ * MisTurnos (PRO)
+ * - Trae /reservas/usuario/:id
+ * - Agrupa por grupo_id (2h) para mostrar 1 card
+ * - Muestra confirmadas y pendientes futuras
+ * - Iconos lucide-react
+ * - Responsive
+ * - SIN teléfono
+ * - Botón Cancelar al final de la tarjeta
  */
 export default function MisTurnos({ usuario, apiUrl, mostrarToast }) {
   const [turnos, setTurnos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modalCancel, setModalCancel] = useState(null);
 
-  // -----------------------------------
-  // Helpers de fecha y hora
-  // -----------------------------------
+  // -------------------------
+  // Helpers
+  // -------------------------
+  const normalizarHora = (horaStr) => {
+    if (!horaStr) return "00:00";
+    const partes = String(horaStr).split(":");
+    return `${partes[0] || "00"}:${partes[1] || "00"}`;
+  };
+
+  const sumarHoras = (horaHHMM, horas) => {
+    const [h, m] = (horaHHMM || "00:00").split(":").map(Number);
+    const d = new Date(2000, 0, 1, h || 0, m || 0, 0);
+    d.setHours(d.getHours() + (horas || 0));
+    const hh = String(d.getHours()).padStart(2, "0");
+    const mm = String(d.getMinutes()).padStart(2, "0");
+    return `${hh}:${mm}`;
+  };
+
   const esFuturoOHoy = (fechaStr, horaStr) => {
     if (!fechaStr) return false;
-
-    const [anio, mes, dia] = fechaStr.split("-").map(Number);
-    const [h, m] = (horaStr || "00:00").split(":").map(Number);
-
-    const fechaTurno = new Date(anio, mes - 1, dia, h, m, 0);
-    const ahora = new Date();
-
-    return fechaTurno >= ahora;
+    const [anio, mes, dia] = String(fechaStr).split("-").map(Number);
+    const [h, m] = String(horaStr || "00:00").split(":").map(Number);
+    const fechaTurno = new Date(
+      anio,
+      (mes || 1) - 1,
+      dia || 1,
+      h || 0,
+      m || 0,
+      0
+    );
+    return fechaTurno >= new Date();
   };
 
   const procesarFecha = (fechaStr) => {
-    if (!fechaStr)
-      return { diaSemana: "", dia: "", mes: "", anio: "" };
+    if (!fechaStr) return { diaSemana: "", dia: "", mes: "", anio: "" };
 
-    const [anio, mes, dia] = fechaStr.split("-").map(Number);
-    const date = new Date(anio, mes - 1, dia);
+    const [anio, mes, dia] = String(fechaStr).split("-").map(Number);
+    const date = new Date(anio, (mes || 1) - 1, dia || 1);
 
     const dias = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
     const meses = [
@@ -56,30 +87,27 @@ export default function MisTurnos({ usuario, apiUrl, mostrarToast }) {
     return {
       diaSemana: dias[date.getDay()],
       dia: String(dia).padStart(2, "0"),
-      mes: meses[mes - 1],
+      mes: meses[(mes || 1) - 1],
       anio: String(anio),
     };
   };
 
-  const normalizarHora = (horaStr) => {
-    if (!horaStr) return "00:00";
-    // "18:00:00" -> "18:00"
-    const partes = horaStr.split(":");
-    return `${partes[0] || "00"}:${partes[1] || "00"}`;
+  const money = (n) => {
+    if (n === null || n === undefined || Number.isNaN(Number(n))) return null;
+    return Number(n).toLocaleString("es-AR", { maximumFractionDigits: 0 });
   };
 
-  const sumarHoras = (horaHHMM, horas) => {
-    const [h, m] = (horaHHMM || "00:00").split(":").map(Number);
-    const d = new Date(2000, 0, 1, h || 0, m || 0, 0);
-    d.setHours(d.getHours() + (horas || 0));
-    const hh = String(d.getHours()).padStart(2, "0");
-    const mm = String(d.getMinutes()).padStart(2, "0");
-    return `${hh}:${mm}`;
+  const pickFirst = (obj, keys) => {
+    for (const k of keys) {
+      if (obj && obj[k] !== undefined && obj[k] !== null && obj[k] !== "")
+        return obj[k];
+    }
+    return null;
   };
 
-  // -----------------------------------
+  // -------------------------
   // Cargar turnos
-  // -----------------------------------
+  // -------------------------
   const cargarTurnos = async () => {
     if (!usuario?.id) return;
 
@@ -90,34 +118,29 @@ export default function MisTurnos({ usuario, apiUrl, mostrarToast }) {
 
       const data = await res.json();
 
-      // 1) Normalizar estado y quedarnos con confirmadas (robusto)
-      const confirmadas = (data || [])
+      const filas = (data || [])
         .map((t) => {
-          const estadoNorm = String(t.estado || "")
-            .trim()
-            .toLowerCase();
-          const mpNorm = String(t.mp_status || "")
-            .trim()
-            .toLowerCase();
+          const estadoNorm = String(t.estado || "").trim().toLowerCase();
+          const mpNorm = String(t.mp_status || "").trim().toLowerCase();
 
-          const esConfirmada =
-            estadoNorm === "confirmada" || mpNorm === "approved";
+          const esConfirmada = estadoNorm === "confirmada" || mpNorm.includes("approved");
+          const esPendiente = estadoNorm === "pendiente" || mpNorm.includes("pending");
 
           return {
             ...t,
             __estadoNorm: estadoNorm,
             __mpNorm: mpNorm,
             __esConfirmada: esConfirmada,
+            __esPendiente: esPendiente,
             __horaHHMM: normalizarHora(t.hora),
           };
         })
-        .filter((t) => t.__esConfirmada)
-        .filter((t) => esFuturoOHoy(t.fecha, t.__horaHHMM));
+        .filter((t) => esFuturoOHoy(t.fecha, t.__horaHHMM))
+        .filter((t) => t.__esConfirmada || t.__esPendiente);
 
-      // 2) Agrupar por grupo_id (si existe) para que 2h aparezca como 1 tarjeta
+      // Agrupar por grupo_id
       const grupos = new Map();
-
-      for (const t of confirmadas) {
+      for (const t of filas) {
         const key = t.grupo_id ? `g-${t.grupo_id}` : `i-${t.id}`;
         if (!grupos.has(key)) grupos.set(key, []);
         grupos.get(key).push(t);
@@ -130,38 +153,50 @@ export default function MisTurnos({ usuario, apiUrl, mostrarToast }) {
         const ultimo = items[items.length - 1];
 
         const horaDesde = primero.__horaHHMM;
-        const horaHasta = sumarHoras(ultimo.__horaHHMM, 1); // asumiendo turnos de 1h por fila
+        const horaHasta =
+          items.length > 1 ? sumarHoras(ultimo.__horaHHMM, 1) : null;
+
+        const grupoConfirmado = items.some((x) => x.__esConfirmada);
+        const estadoGrupo = grupoConfirmado ? "confirmada" : "pendiente";
+
+        const initPoint =
+          pickFirst(primero, ["init_point"]) ||
+          pickFirst(ultimo, ["init_point"]) ||
+          null;
+
+        const totalGrupo = pickFirst(primero, ["total_grupo", "total", "precio_total"]);
+        const seniaPagada = pickFirst(primero, ["senia_pagada", "monto_senia", "senia"]);
+        const saldoGrupo = pickFirst(primero, ["saldo_grupo", "saldo", "saldo_a_cobrar"]);
 
         return {
-          idPrincipal: primero.id, // para cancelar (tu backend ya maneja grupo_id en cancelar si existe)
+          key: primero.grupo_id ? `g-${primero.grupo_id}` : `i-${primero.id}`,
+          idPrincipal: primero.id,
           grupo_id: primero.grupo_id || null,
           id_cancha: primero.id_cancha,
           fecha: primero.fecha,
           nombre_cliente: primero.nombre_cliente,
-          telefono_cliente: primero.telefono_cliente,
-          estado: "confirmada",
-          mp_status: "approved",
+          estado: estadoGrupo,
           hora_desde: horaDesde,
-          hora_hasta: items.length > 1 ? horaHasta : null,
-          horas: items.map((x) => x.__horaHHMM),
+          hora_hasta: horaHasta,
           cantidad_hs: items.length,
+          init_point: initPoint,
+          total_grupo: totalGrupo,
+          senia_pagada: seniaPagada,
+          saldo_grupo: saldoGrupo,
         };
       });
 
-      // 3) Ordenar por fecha y hora
       agrupados.sort((a, b) => {
-        if (a.fecha === b.fecha) {
-          return a.hora_desde.localeCompare(b.hora_desde);
-        }
+        if (a.fecha === b.fecha) return a.hora_desde.localeCompare(b.hora_desde);
         return a.fecha.localeCompare(b.fecha);
       });
 
       setTurnos(agrupados);
     } catch (e) {
       console.error(e);
-      alert("No se pudieron cargar tus turnos.");
+      mostrarToast?.("No se pudieron cargar tus turnos.", "error");
     } finally {
-      setLoading(false);
+      setTimeout(() => setLoading(false), 400);
     }
   };
 
@@ -170,9 +205,9 @@ export default function MisTurnos({ usuario, apiUrl, mostrarToast }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [usuario?.id]);
 
-  // -----------------------------------
-  // Cancelación
-  // -----------------------------------
+  // -------------------------
+  // Acciones
+  // -------------------------
   const abrirModalCancelacion = (t) => {
     const rango =
       t.cantidad_hs > 1 && t.hora_hasta
@@ -182,7 +217,7 @@ export default function MisTurnos({ usuario, apiUrl, mostrarToast }) {
     setModalCancel({
       id: t.idPrincipal,
       titulo: "Cancelar turno",
-      mensaje: `¿Querés cancelar tu turno de la Cancha ${t.id_cancha} el ${t.fecha} (${rango} hs)?`,
+      mensaje: `¿Querés cancelar tu turno de la Cancha ${t.id_cancha} el ${t.fecha} (${rango})?`,
     });
   };
 
@@ -210,26 +245,60 @@ export default function MisTurnos({ usuario, apiUrl, mostrarToast }) {
     }
   };
 
-  // -----------------------------------
+  const abrirPago = (initPoint) => {
+    if (!initPoint) {
+      mostrarToast?.("No se encontró el link de pago.", "error");
+      return;
+    }
+    window.open(initPoint, "_blank", "noopener,noreferrer");
+  };
+
+  // -------------------------
+  // UI helpers
+  // -------------------------
+  const badge = (estado) => {
+    const isOk = estado === "confirmada";
+    return (
+      <span
+        className={[
+          "inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full border font-semibold uppercase",
+          isOk
+            ? "bg-emerald-900/20 text-emerald-300 border-emerald-500/20"
+            : "bg-amber-900/20 text-amber-300 border-amber-500/20",
+        ].join(" ")}
+      >
+        {isOk ? <BadgeCheck size={12} /> : <Hourglass size={12} />}
+        {isOk ? "Confirmada" : "Pendiente"}
+      </span>
+    );
+  };
+
+  const resumenPagoDisponible = (t) =>
+    t.total_grupo !== null && t.senia_pagada !== null && t.saldo_grupo !== null;
+
+  // -------------------------
   // Render
-  // -----------------------------------
+  // -------------------------
   return (
     <div className="w-full">
       <div className="mb-3">
         <h2 className="text-lg font-bold text-white">Mis turnos</h2>
         <p className="text-xs text-slate-400">
-          Acá vas a ver tus reservas confirmadas.
+          Acá vas a ver tus reservas futuras (confirmadas y pendientes).
         </p>
       </div>
 
       {loading ? (
-        <div className="py-10">
-          <Loader />
-        </div>
+        <MisTurnosSkeleton items={3} />
       ) : turnos.length === 0 ? (
-        <p className="text-sm text-center text-slate-400 mt-8">
-          No tenés turnos confirmados.
-        </p>
+        <div className="mt-8 text-center">
+          <p className="text-sm text-slate-300 font-semibold">
+            No tenés turnos futuros.
+          </p>
+          <p className="text-xs text-slate-500 mt-1">
+            Cuando reserves, te van a aparecer acá.
+          </p>
+        </div>
       ) : (
         <div className="space-y-3">
           {turnos.map((t) => {
@@ -239,36 +308,104 @@ export default function MisTurnos({ usuario, apiUrl, mostrarToast }) {
                 ? `${t.hora_desde} a ${t.hora_hasta}`
                 : `${t.hora_desde}`;
 
+            const pagoOk = resumenPagoDisponible(t);
+
             return (
               <div
-                key={t.grupo_id ? `g-${t.grupo_id}` : `i-${t.idPrincipal}`}
+                key={t.key}
                 className="bg-slate-900 border border-slate-800 rounded-2xl p-4"
               >
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-xs text-slate-400">
-                      {f.diaSemana} {f.dia} {f.mes} {f.anio}
-                    </p>
-                    <p className="text-base font-bold text-white">
-                      Cancha {t.id_cancha} · {rango} hs
-                    </p>
-
-                    <div className="mt-1 flex items-center gap-2">
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-900/20 text-emerald-300 border border-emerald-500/20 font-semibold uppercase">
-                        Confirmada
-                      </span>
+                {/* Header */}
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {badge(t.estado)}
                       {t.cantidad_hs > 1 && (
-                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-900/20 text-indigo-300 border border-indigo-500/20 font-semibold uppercase">
+                        <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full border font-semibold uppercase bg-indigo-900/20 text-indigo-300 border-indigo-500/20">
+                          <Clock size={12} />
                           {t.cantidad_hs} horas
                         </span>
                       )}
                     </div>
+
+                    <p className="text-base font-bold text-white">Cancha {t.id_cancha}</p>
+
+                    {/* Fecha + Horario MÁS GRANDES EN CELULAR */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
+                      <div className="flex items-center gap-2 text-sm sm:text-xs text-slate-200">
+                        <CalendarDays size={18} className="text-slate-300" />
+                        <span className="font-semibold">
+                          {f.diaSemana} {f.dia} {f.mes} {f.anio}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-2 text-sm sm:text-xs text-slate-200">
+                        <Clock size={18} className="text-slate-300" />
+                        <span className="font-semibold">{rango} hs</span>
+                      </div>
+                    </div>
                   </div>
 
+                  {/* Solo botón de pagar arriba si está pendiente */}
+                  <div className="flex flex-row sm:flex-col gap-2 sm:min-w-[160px]">
+                    {t.estado === "pendiente" && (
+                      <button
+                        onClick={() => abrirPago(t.init_point)}
+                        className="w-full inline-flex items-center justify-center gap-2 text-[12px] px-3 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-semibold transition-colors"
+                      >
+                        <CreditCard size={16} />
+                        Pagar seña
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Pago (si backend lo devuelve) */}
+                <div className="mt-4 border-t border-slate-800 pt-3">
+                  <div className="flex items-center gap-2 text-xs text-slate-300 font-semibold mb-2">
+                    <Receipt size={16} className="text-slate-400" />
+                    Detalle de pago
+                  </div>
+
+                  {pagoOk ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                      <div className="bg-slate-950 border border-slate-800 rounded-xl p-3">
+                        <p className="text-[10px] text-slate-400">Total</p>
+                        <p className="text-sm font-bold text-white">
+                          ${money(t.total_grupo)}
+                        </p>
+                      </div>
+                      <div className="bg-slate-950 border border-slate-800 rounded-xl p-3">
+                        <p className="text-[10px] text-slate-400">Seña pagada</p>
+                        <p className="text-sm font-bold text-emerald-300">
+                          ${money(t.senia_pagada)}
+                        </p>
+                      </div>
+                      <div className="bg-slate-950 border border-slate-800 rounded-xl p-3">
+                        <p className="text-[10px] text-slate-400">Saldo a cobrar</p>
+                        <p className="text-sm font-bold text-amber-300">
+                          ${money(t.saldo_grupo)}
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-xs text-slate-500">
+                      (Opcional PRO) Cuando el backend devuelva{" "}
+                      <span className="text-slate-300">total_grupo</span>,{" "}
+                      <span className="text-slate-300">senia_pagada</span> y{" "}
+                      <span className="text-slate-300">saldo_grupo</span>, acá se
+                      van a mostrar automáticamente.
+                    </p>
+                  )}
+                </div>
+
+                {/* Botón Cancelar al FINAL */}
+                <div className="mt-4 flex justify-end">
                   <button
                     onClick={() => abrirModalCancelacion(t)}
-                    className="text-[11px] px-2 py-1 rounded-lg bg-red-900/20 hover:bg-red-900/40 text-red-400 border border-red-500/30"
+                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 text-[12px] px-4 py-2 rounded-xl bg-red-900/20 hover:bg-red-900/35 text-red-300 border border-red-500/30 font-semibold transition-colors"
                   >
+                    <XCircle size={16} />
                     Cancelar
                   </button>
                 </div>
@@ -278,7 +415,7 @@ export default function MisTurnos({ usuario, apiUrl, mostrarToast }) {
         </div>
       )}
 
-      {/* Modal de confirmación de cancelación */}
+      {/* Modal confirmación cancelación */}
       {modalCancel && (
         <ModalConfirmacion
           titulo={modalCancel.titulo}

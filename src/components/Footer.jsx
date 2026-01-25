@@ -3,8 +3,8 @@ import { MapPin, Phone, MessageCircle } from "lucide-react";
 
 export default function Footer() {
   const clubNombre = "Club del Bosque";
-  const telefonoWhatsapp = "5493716400743";
-  const telefonoMostrado = "+54 9 3716 400743";
+  const telefonoWhatsapp = "5493704379332";
+  const telefonoMostrado = "+54 9 3704 379332";
 
   const googleMapsUrl =
     "https://maps.app.goo.gl/jWLQikgkhvCgHotNA";
