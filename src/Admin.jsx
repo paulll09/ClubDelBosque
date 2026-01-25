@@ -31,7 +31,7 @@ export default function Admin() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-50 flex justify-center">
-      <div className="w-full max-w-3xl px-4 py-6 space-y-4">
+      <div className="w-full max-w-7xl px-4 py-6 space-y-4">
         {!logueado ? (
           <>
             <h1 className="text-2xl font-bold text-center mb-2">
