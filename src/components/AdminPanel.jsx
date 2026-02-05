@@ -275,12 +275,8 @@ export default function AdminPanel({ apiUrl, adminToken, onLogout }) {
   const reservasVisibles = reservas;
 
     return (
-  <div
-    className={`animate-fadeIn space-y-6 pb-16 w-full mx-auto px-2 sm:px-4 ${
-      vistaAdmin === "tarifas" ? "max-w-7xl" : "max-w-3xl"
-    }`}
-  >
-    <EncabezadoAdmin onLogout={onLogout} />
+    <div className="animate-fadeIn space-y-6 pb-16 w-full mx-auto px-2 sm:px-4 max-w-7xl">  
+        <EncabezadoAdmin onLogout={onLogout} />
 
     {/* Tabs */}
     <div className="flex gap-2 px-2">

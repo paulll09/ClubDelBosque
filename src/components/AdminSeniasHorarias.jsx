@@ -55,10 +55,11 @@ export default function AdminSeniasHorarias({ apiUrl, adminToken }) {
       )}`;
 
       const r = await fetch(url, { headers });
-      if (!r.ok)
+      if (!r.ok) {
         throw new Error(
           (await readErrorMessage(r)) || "No se pudieron cargar las señas."
         );
+      }
 
       const data = await r.json();
 
@@ -116,7 +117,7 @@ export default function AdminSeniasHorarias({ apiUrl, adminToken }) {
       const monto = parseMonto(s._monto);
 
       const payload = {
-        id_cancha: Number(s._id_cancha),
+        id_cancha: Number(s._id_cancha || filtroCancha),
         hora_desde: toHHMMSS(s._hora_desde),
         hora_hasta: toHHMMSS(s._hora_hasta),
         monto_senia: monto,
@@ -128,6 +129,9 @@ export default function AdminSeniasHorarias({ apiUrl, adminToken }) {
       }
       if (!Number.isFinite(payload.monto_senia) || payload.monto_senia < 0) {
         throw new Error("Ingresá un monto válido.");
+      }
+      if (payload.hora_desde === payload.hora_hasta) {
+        throw new Error("Desde y hasta no pueden ser iguales.");
       }
 
       const url = s._isNew
@@ -228,14 +232,14 @@ export default function AdminSeniasHorarias({ apiUrl, adminToken }) {
         </div>
       )}
 
-      {/* Desktop */}
-      <div className="hidden sm:block rounded-2xl border border-white/10 bg-black/30">
-        <div className="w-full">
+      {/* Desktop (FIX: overflow + min-width para que Acciones no quede “afuera”) */}
+      <div className="hidden sm:block rounded-2xl border border-white/10 bg-black/30 overflow-x-auto">
+        <div className="min-w-[980px]">
           {/* Header */}
           <div
             className="grid gap-3 px-4 py-3 text-white/80 text-sm border-b border-white/10"
             style={{
-              gridTemplateColumns: "120px 140px 140px minmax(160px,1fr) 260px",
+              gridTemplateColumns: "140px 160px 160px minmax(200px,1fr) 260px",
             }}
           >
             <div className="font-semibold">Cancha</div>
@@ -249,9 +253,7 @@ export default function AdminSeniasHorarias({ apiUrl, adminToken }) {
           {loading ? (
             <div className="p-4 text-white/70">Cargando...</div>
           ) : senias.length === 0 ? (
-            <div className="p-4 text-white/70">
-              No hay señas configuradas.
-            </div>
+            <div className="p-4 text-white/70">No hay señas configuradas.</div>
           ) : (
             senias.map((s) => (
               <div
@@ -259,7 +261,7 @@ export default function AdminSeniasHorarias({ apiUrl, adminToken }) {
                 className="grid gap-3 px-4 py-4 border-b border-white/5 items-center"
                 style={{
                   gridTemplateColumns:
-                    "120px 140px 140px minmax(160px,1fr) 260px",
+                    "140px 160px 160px minmax(200px,1fr) 260px",
                 }}
               >
                 <select
@@ -269,9 +271,9 @@ export default function AdminSeniasHorarias({ apiUrl, adminToken }) {
                   }
                   className="h-10 px-3 rounded-xl bg-black/50 border border-white/10 text-white"
                 >
-                  <option value="1">1</option>
-                  <option value="2">2</option>
-                  <option value="3">3</option>
+                  <option value="1">Cancha 1</option>
+                  <option value="2">Cancha 2</option>
+                  <option value="3">Cancha 3</option>
                 </select>
 
                 <input
@@ -375,22 +377,28 @@ export default function AdminSeniasHorarias({ apiUrl, adminToken }) {
               </div>
 
               <div className="grid grid-cols-2 gap-3">
-                <input
-                  type="time"
-                  value={s._hora_desde}
-                  onChange={(e) =>
-                    onChangeRow(s.id, { _hora_desde: e.target.value })
-                  }
-                  className="h-10 px-3 rounded-xl bg-black/50 border border-white/10 text-white"
-                />
-                <input
-                  type="time"
-                  value={s._hora_hasta}
-                  onChange={(e) =>
-                    onChangeRow(s.id, { _hora_hasta: e.target.value })
-                  }
-                  className="h-10 px-3 rounded-xl bg-black/50 border border-white/10 text-white"
-                />
+                <div>
+                  <label className="text-xs text-white/70">Desde</label>
+                  <input
+                    type="time"
+                    value={s._hora_desde}
+                    onChange={(e) =>
+                      onChangeRow(s.id, { _hora_desde: e.target.value })
+                    }
+                    className="h-10 w-full px-3 rounded-xl bg-black/50 border border-white/10 text-white"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-white/70">Hasta</label>
+                  <input
+                    type="time"
+                    value={s._hora_hasta}
+                    onChange={(e) =>
+                      onChangeRow(s.id, { _hora_hasta: e.target.value })
+                    }
+                    className="h-10 w-full px-3 rounded-xl bg-black/50 border border-white/10 text-white"
+                  />
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-2">
