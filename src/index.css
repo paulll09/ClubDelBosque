@@ -52,3 +52,25 @@ body {
   opacity: 0; /* Inicia invisible */
   animation: slideUp 0.6s ease-out forwards;
 }
+
+/* ===== ICONOS DE DATE Y TIME EN BLANCO, SIN ROMPER EL CLICK ===== */
+
+input[type="date"],
+input[type="time"] {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+/* Indicador calendario / reloj */
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="time"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);        /* los vuelve blancos */
+  opacity: 0.9;             /* un poco más suave */
+  cursor: pointer;          /* mantiene el click */
+}
+
+/* Para Firefox */
+input[type="date"]::-moz-focus-inner,
+input[type="time"]::-moz-focus-inner {
+  border: 0;
+}
