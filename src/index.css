@@ -11,7 +11,10 @@ body {
 /* Forza tamaño de letra 16px en inputs solo en dispositivos móviles.
    Esto evita que el navegador haga zoom automático al escribir. */
 @media (max-width: 640px) {
-  input, select, textarea {
+
+  input,
+  select,
+  textarea {
     font-size: 16px !important;
   }
 }
@@ -22,35 +25,82 @@ body {
 }
 
 .no-scrollbar {
-  -ms-overflow-style: none; /* IE y Edge */
-  scrollbar-width: none;    /* Firefox */
+  -ms-overflow-style: none;
+  /* IE y Edge */
+  scrollbar-width: none;
+  /* Firefox */
 }
+
 /* --- ANIMACIONES CSS --- */
 /* Las definimos aquí para mantener el JS limpio */
 
+/* --- ANIMACIONES CSS AVANZADAS --- */
+
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes slideUp {
-  from { 
-    opacity: 0; 
-    transform: translateY(20px); 
+  from {
+    opacity: 0;
+    transform: translateY(20px);
   }
-  to { 
-    opacity: 1; 
-    transform: translateY(0); 
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse-subtle {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.8;
   }
 }
 
 .animate-fadeIn {
-  animation: fadeIn 0.8s ease-out forwards;
+  animation: fadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 .animate-slideUp {
-  opacity: 0; /* Inicia invisible */
-  animation: slideUp 0.6s ease-out forwards;
+  opacity: 0;
+  animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation-delay: 0.1s;
+}
+
+.animate-pulse-subtle {
+  animation: pulse-subtle 2s ease-in-out infinite;
+}
+
+/* --- GLASSMORPHISM & UTILITIES --- */
+.glass-panel {
+  @apply bg-slate-900/60 backdrop-blur-xl border border-white/10 shadow-xl;
+}
+
+.glass-card {
+  @apply bg-slate-800/40 backdrop-blur-lg border border-white/5 hover:bg-slate-800/60 transition-all duration-300;
+}
+
+.text-gradient-pro {
+  @apply text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-200;
+}
+
+.btn-primary-pro {
+  @apply bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white font-bold shadow-lg shadow-emerald-900/20 transition-all active:scale-95;
 }
 
 /* ===== ICONOS DE DATE Y TIME EN BLANCO, SIN ROMPER EL CLICK ===== */
@@ -64,9 +114,12 @@ input[type="time"] {
 /* Indicador calendario / reloj */
 input[type="date"]::-webkit-calendar-picker-indicator,
 input[type="time"]::-webkit-calendar-picker-indicator {
-  filter: invert(1);        /* los vuelve blancos */
-  opacity: 0.9;             /* un poco más suave */
-  cursor: pointer;          /* mantiene el click */
+  filter: invert(1);
+  /* los vuelve blancos */
+  opacity: 0.9;
+  /* un poco más suave */
+  cursor: pointer;
+  /* mantiene el click */
 }
 
 /* Para Firefox */

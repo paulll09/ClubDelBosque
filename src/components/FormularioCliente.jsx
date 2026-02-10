@@ -16,7 +16,7 @@ export default function FormularioCliente({ fechaSeleccionada, canchaSeleccionad
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4 animate-fadeIn">
       <div className="w-full max-w-sm bg-slate-900 border border-slate-700/50 rounded-3xl shadow-2xl p-6 animate-slideUp relative overflow-hidden">
-        
+
         {/* Glow effect */}
         <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none"></div>
 
@@ -27,9 +27,9 @@ export default function FormularioCliente({ fechaSeleccionada, canchaSeleccionad
               {fechaSeleccionada} • {horaSeleccionada} hs
             </p>
           </div>
-          <button 
-             onClick={onCancelar}
-             className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white transition-colors"
+          <button
+            onClick={onCancelar}
+            className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white transition-colors"
           >
             ✕
           </button>
@@ -39,13 +39,16 @@ export default function FormularioCliente({ fechaSeleccionada, canchaSeleccionad
           <div className="space-y-1">
             <label className="text-xs font-semibold text-slate-400 ml-3">Cancha</label>
             <div className="w-full px-4 py-3 bg-slate-950/50 border border-slate-800 rounded-2xl text-slate-300 text-sm flex items-center gap-2">
-               <span>🎾</span> Cancha {canchaSeleccionada}
+              <span>🎾</span> Cancha {canchaSeleccionada}
             </div>
           </div>
 
           <div className="space-y-1">
             <label className="text-xs font-semibold text-slate-400 ml-3">Nombre completo</label>
             <input
+              name="nombre"
+              id="nombre"
+              autoComplete="name"
               type="text"
               value={nombre}
               onChange={(e) => setNombre(e.target.value)}
@@ -58,6 +61,9 @@ export default function FormularioCliente({ fechaSeleccionada, canchaSeleccionad
           <div className="space-y-1">
             <label className="text-xs font-semibold text-slate-400 ml-3">Teléfono (WhatsApp)</label>
             <input
+              name="telefono"
+              id="telefono"
+              autoComplete="tel"
               type="tel"
               value={telefono}
               onChange={(e) => setTelefono(e.target.value)}
@@ -67,7 +73,7 @@ export default function FormularioCliente({ fechaSeleccionada, canchaSeleccionad
           </div>
 
           <div className="pt-2 flex gap-3">
-             <button
+            <button
               type="button"
               onClick={onCancelar}
               className="flex-1 py-3.5 rounded-2xl font-semibold text-sm bg-transparent border border-slate-700 text-slate-300 hover:bg-slate-800 transition-colors"

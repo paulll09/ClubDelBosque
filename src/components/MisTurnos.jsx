@@ -24,14 +24,17 @@ import {
  * - SIN teléfono
  * - Botón Cancelar al final de la tarjeta
  */
-export default function MisTurnos({ usuario, apiUrl, mostrarToast }) {
+import reservasService from "../services/reservas.service";
+import { useToast } from "../context/ToastContext";
+
+/**
+ * MisTurnos (PRO)
+ */
+export default function MisTurnos({ usuario }) { // Removed apiUrl, mostrarToast props
   const [turnos, setTurnos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modalCancel, setModalCancel] = useState(null);
-
-  // -------------------------
-  // Helpers
-  // -------------------------
+  const { mostrarToast } = useToast();
   const normalizarHora = (horaStr) => {
     if (!horaStr) return "00:00";
     const partes = String(horaStr).split(":");
@@ -113,10 +116,8 @@ export default function MisTurnos({ usuario, apiUrl, mostrarToast }) {
 
     setLoading(true);
     try {
-      const res = await fetch(`${apiUrl}/reservas/usuario/${usuario.id}`);
-      if (!res.ok) throw new Error("Error al obtener las reservas");
-
-      const data = await res.json();
+      // Use service
+      const data = await reservasService.getReservasUsuario(usuario.id);
 
       const filas = (data || [])
         .map((t) => {
@@ -201,7 +202,11 @@ export default function MisTurnos({ usuario, apiUrl, mostrarToast }) {
   };
 
   useEffect(() => {
-    cargarTurnos();
+    if (usuario?.id) {
+      cargarTurnos();
+    } else {
+      setLoading(false);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [usuario?.id]);
 
@@ -225,23 +230,14 @@ export default function MisTurnos({ usuario, apiUrl, mostrarToast }) {
     if (!modalCancel?.id) return;
 
     try {
-      const res = await fetch(`${apiUrl}/reservas/cancelar/${modalCancel.id}`, {
-        method: "POST",
-      });
-
-      const data = await res.json().catch(() => ({}));
-
-      if (!res.ok) {
-        mostrarToast?.(data.message || "No se pudo cancelar.", "error");
-        return;
-      }
+      await reservasService.cancelarReserva(modalCancel.id);
 
       mostrarToast?.("Turno cancelado correctamente.", "success");
       setModalCancel(null);
       cargarTurnos();
     } catch (e) {
       console.error(e);
-      mostrarToast?.("Error de conexión al cancelar.", "error");
+      mostrarToast?.("No se pudo cancelar el turno.", "error");
     }
   };
 

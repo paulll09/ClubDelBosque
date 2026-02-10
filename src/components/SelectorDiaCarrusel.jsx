@@ -50,41 +50,37 @@ export default function SelectorDiaCarrusel({ fechaSeleccionada, onSeleccionarFe
             type="button"
             onClick={() => onSeleccionarFecha(dia.valor)}
             className={`
-              relative min-w-[72px] flex flex-col items-center justify-center rounded-2xl border 
-              snap-start py-3 transition-all duration-200
-              ${
-                seleccionado
-                  ? "bg-emerald-500 text-slate-950 border-emerald-400 scale-[1.03]"
-                  : "bg-slate-900 text-slate-300 border-slate-700 hover:border-slate-500 hover:bg-slate-800"
+              relative min-w-[76px] flex flex-col items-center justify-center rounded-2xl border 
+              snap-start py-4 transition-all duration-300 group
+              ${seleccionado
+                ? "bg-gradient-to-br from-emerald-500 to-emerald-600 text-white border-emerald-400 shadow-lg shadow-emerald-900/40 scale-105"
+                : "glass-card text-slate-400 border-white/5 hover:border-emerald-500/30 hover:bg-slate-800/80"
               }
             `}
           >
             <span
-              className={`text-[10px] font-semibold uppercase tracking-wider mb-1 ${
-                seleccionado ? "text-slate-950" : "text-slate-400"
-              }`}
+              className={`text-[10px] font-bold uppercase tracking-widest mb-1 ${seleccionado ? "text-emerald-100" : "text-slate-500 group-hover:text-emerald-400/80 transition-colors"
+                }`}
             >
               {dia.diaSemana}
             </span>
 
             <span
-              className={`text-[22px] font-bold leading-none tracking-tight ${
-                seleccionado ? "text-slate-950" : "text-slate-100"
-              }`}
+              className={`text-2xl font-black leading-none tracking-tight ${seleccionado ? "text-white drop-shadow-md" : "text-slate-300 group-hover:text-white transition-colors"
+                }`}
             >
               {dia.numeroDia}
             </span>
 
             <span
-              className={`text-[10px] font-medium mt-1 ${
-                seleccionado ? "text-slate-900/80" : "text-slate-400/80"
-              }`}
+              className={`text-[10px] font-medium mt-1 ${seleccionado ? "text-emerald-100/80" : "text-slate-500 group-hover:text-slate-400"
+                }`}
             >
               {dia.mesCorto}
             </span>
 
             {seleccionado && (
-              <div className="absolute -bottom-1 w-6 h-[2px] rounded-full bg-slate-950/70" />
+              <div className="absolute inset-0 rounded-2xl ring-2 ring-emerald-400/50 pointer-events-none" />
             )}
           </button>
         );

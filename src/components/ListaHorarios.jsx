@@ -58,8 +58,9 @@ export default function ListaHorarios({
   const pocosHorarios = horariosDisponibles.length <= 3;
   const claseGrid = pocosHorarios ? "grid-cols-2" : "grid-cols-3";
 
+  // Renderizado
   return (
-    <div className={`grid ${claseGrid} gap-3`}>
+    <div className={`grid grid-cols-3 sm:grid-cols-4 gap-3`}>
       {horarios.map((hora) => {
         const reservado = estaReservado ? estaReservado(hora) : false;
         const bloqueado = esBloqueado ? esBloqueado(hora) : false;
@@ -75,21 +76,34 @@ export default function ListaHorarios({
             onClick={() => disponible && seleccionarHorario(hora)}
             disabled={deshabilitado}
             className={`
-              relative aspect-[4/3] rounded-xl border text-sm font-medium flex flex-col items-center justify-center gap-1
-              transition-all duration-200
-              ${
-                deshabilitado
-                  ? "bg-slate-950/70 text-slate-500 border-slate-800 cursor-default"
-                  : "bg-slate-800 text-emerald-50 border-slate-700 hover:bg-emerald-600 hover:border-emerald-500 hover:shadow-lg hover:scale-105 active:scale-95"
+              relative group overflow-hidden rounded-xl border py-3 flex flex-col items-center justify-center gap-0.5
+              transition-all duration-300
+              ${deshabilitado
+                ? "bg-slate-900/40 text-slate-600 border-slate-800/50 cursor-not-allowed opacity-60"
+                : "bg-slate-800/60 text-white border-white/5 hover:border-emerald-500/50 hover:bg-emerald-900/20 hover:shadow-lg hover:shadow-emerald-900/20 active:scale-95"
               }
             `}
           >
-            <span className="text-lg font-bold tracking-tight">{hora}</span>
-
             {disponible && (
-              <span className="text-[9px] font-bold uppercase tracking-wider text-emerald-300/90">
+              <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            )}
+
+            <span className={`text-sm font-bold tracking-tight z-10 ${disponible ? "text-emerald-50 group-hover:text-emerald-300" : ""}`}>
+              {hora}
+            </span>
+
+            {disponible ? (
+              <span className="text-[9px] font-bold uppercase tracking-wider text-emerald-400/80 z-10 group-hover:text-emerald-300">
                 Libre
               </span>
+            ) : (
+              <span className="text-[9px] font-medium uppercase tracking-wider text-slate-600 z-10">
+                {reservado ? "Ocupado" : bloqueado ? "Bloqueado" : "Pasado"}
+              </span>
+            )}
+
+            {disponible && (
+              <div className="absolute bottom-0 left-0 w-full h-[2px] bg-emerald-500/30 scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left"></div>
             )}
           </button>
         );

@@ -5,9 +5,9 @@ export default function Perfil({ usuario, onLogout }) {
     <div className="p-6 animate-fadeIn">
       <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 text-center shadow-xl">
         <div className="w-20 h-20 bg-emerald-500/20 rounded-full mx-auto flex items-center justify-center text-3xl font-bold text-emerald-400 mb-4 border border-emerald-500/50">
-          {usuario.nombre.charAt(0).toUpperCase()}
+          {(usuario.nombre || usuario.email || "?").charAt(0).toUpperCase()}
         </div>
-        <h2 className="text-xl font-bold text-white">{usuario.nombre}</h2>
+        <h2 className="text-xl font-bold text-white">{usuario.nombre || "Usuario"}</h2>
         <p className="text-slate-400 text-sm mb-6">{usuario.email}</p>
 
         <div className="text-left space-y-3 mb-8">
@@ -21,12 +21,14 @@ export default function Perfil({ usuario, onLogout }) {
           </div>
         </div>
 
-        <button 
+        <button
           onClick={onLogout}
           className="w-full py-3 rounded-xl bg-red-500/10 text-red-400 font-semibold hover:bg-red-500/20 transition-colors border border-red-500/20"
         >
           Cerrar Sesión
         </button>
+
+
       </div>
     </div>
   );
