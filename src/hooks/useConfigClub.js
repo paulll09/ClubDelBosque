@@ -1,38 +1,17 @@
 // src/hooks/useConfigClub.js
 import { useEffect, useState } from "react";
 import { generarHorariosDesdeConfig } from "../helpers/horarios";
-import { obtenerConfigPublica } from "../services/apiConfig";
-
-
+import configService from "../services/config.service";
 
 /**
  * Hook: useConfigClub
- *
- * Responsabilidad:
- *  - Cargar la configuración pública del club desde /config.
- *  - Generar la lista de horarios dinámicos a partir de:
- *      hora_apertura, hora_cierre, duracion_turno_minutos.
- *
- * Devuelve:
- *  - config: objeto de configuración completo.
- *  - horariosConfig: array de horarios "HH:MM" generados.
- *  - cargandoConfig: boolean de carga.
- *  - errorConfig: error en caso de fallo.
  */
 const HORARIOS_FALLBACK = [
-  "14:00",
-  "15:00",
-  "16:00",
-  "17:00",
-  "18:00",
-  "19:00",
-  "20:00",
-  "21:00",
-  "22:00",
-  "23:00",
+  "14:00", "15:00", "16:00", "17:00", "18:00",
+  "19:00", "20:00", "21:00", "22:00", "23:00"
 ];
 
-export function useConfigClub(apiUrl) {
+export function useConfigClub() {
   const [config, setConfig] = useState(null);
   const [horariosConfig, setHorariosConfig] = useState(HORARIOS_FALLBACK);
   const [cargandoConfig, setCargandoConfig] = useState(false);
@@ -44,7 +23,7 @@ export function useConfigClub(apiUrl) {
       setErrorConfig(null);
 
       try {
-        const data = await obtenerConfigPublica(apiUrl);
+        const data = await configService.getConfig();
         setConfig(data);
 
         const horariosGenerados = generarHorariosDesdeConfig(
@@ -65,7 +44,7 @@ export function useConfigClub(apiUrl) {
     };
 
     cargar();
-  }, [apiUrl]);
+  }, []);
 
   return {
     config,

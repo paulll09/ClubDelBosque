@@ -10,8 +10,9 @@ export default function Toast({ message, type = "info", onClose }) {
   }, [onClose]);
 
   // Estilos base y específicos por tipo
-  const baseStyles = "fixed top-6 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-3 px-5 py-3 rounded-xl shadow-2xl transition-all animate-fadeIn border backdrop-blur-md";
-  
+  // Fix centering: use left-0 right-0 mx-auto w-fit to avoid conflict with animate-fadeIn transform
+  const baseStyles = "fixed top-6 left-0 right-0 mx-auto w-fit z-[100] flex items-center gap-3 px-5 py-3 rounded-xl shadow-2xl transition-all animate-fadeIn border backdrop-blur-md";
+
   const typeStyles = {
     success: "bg-emerald-500/10 border-emerald-500/20 text-emerald-400 shadow-emerald-500/10",
     error: "bg-red-500/10 border-red-500/20 text-red-400 shadow-red-500/10",

@@ -1,7 +1,10 @@
 import React, { useState } from "react";
+import { useUser } from "../context/UserContext";
 
-export default function LoginCliente({ onLoginSuccess, onCancelar, apiUrl }) {
+export default function LoginCliente({ onLoginSuccess, onCancelar }) { // Removed apiUrl prop
+  const { loginAPI, registerAPI, loadingAuth } = useUser();
   const [esRegistro, setEsRegistro] = useState(false);
+
 
   // Campos adaptados al backend
   const [form, setForm] = useState({
@@ -12,7 +15,8 @@ export default function LoginCliente({ onLoginSuccess, onCancelar, apiUrl }) {
   });
 
   const [error, setError] = useState("");
-  const [cargando, setCargando] = useState(false);
+  // const [cargando, setCargando] = useState(false); // Removed, use loadingAuth
+
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -33,49 +37,33 @@ export default function LoginCliente({ onLoginSuccess, onCancelar, apiUrl }) {
     setForm({ ...form, [name]: value });
   };
 
+
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
-    setCargando(true);
-
-    const endpoint = esRegistro
-      ? `${apiUrl}/cliente/registro`
-      : `${apiUrl}/cliente/login`;
+    // setCargando(true); // Handled by context or local state if we want
 
     try {
-      const res = await fetch(endpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-
-        // Enviamos EXACTAMENTE lo que el backend necesita
-        body: JSON.stringify(form),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        const mensajeError =
-          data.messages?.error ||
-          data.messages ||
-          data.mensaje ||
-          data.message ||
-          "Error en la solicitud";
-
-        throw new Error(
-          typeof mensajeError === "object"
-            ? Object.values(mensajeError).join(", ")
-            : mensajeError
-        );
+      if (esRegistro) {
+        await registerAPI(form);
+        // onLoginSuccess is handled by context state change usually, 
+        // but here we might want to trigger the callback if the parent expects it.
+        // The context updates 'usuario', so App.jsx will react.
+        // We can pass the user object if context returns it or we get it from state.
+      } else {
+        await loginAPI(form.email, form.password);
       }
 
-      onLoginSuccess(data.usuario);
+      // Success is implicit if no error thrown
+      if (onLoginSuccess) onLoginSuccess();
+
     } catch (err) {
-      console.error("Login error:", err);
+      console.error("Auth error:", err);
       setError(err.message);
-    } finally {
-      setCargando(false);
     }
   };
+
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/90 backdrop-blur-sm p-4 animate-fadeIn">
@@ -100,6 +88,7 @@ export default function LoginCliente({ onLoginSuccess, onCancelar, apiUrl }) {
                 required
                 onChange={handleChange}
                 className="w-full p-3 bg-slate-800 rounded-xl text-white border border-slate-700 focus:border-emerald-500 placeholder-slate-500 text-sm"
+                autoComplete="name"
               />
               <input
                 name="telefono"
@@ -107,6 +96,7 @@ export default function LoginCliente({ onLoginSuccess, onCancelar, apiUrl }) {
                 required
                 onChange={handleChange}
                 className="w-full p-3 bg-slate-800 rounded-xl text-white border border-slate-700 focus:border-emerald-500 placeholder-slate-500 text-sm"
+                autoComplete="tel"
               />
             </>
           )}
@@ -118,6 +108,7 @@ export default function LoginCliente({ onLoginSuccess, onCancelar, apiUrl }) {
             required
             onChange={handleChange}
             className="w-full p-3 bg-slate-800 rounded-xl text-white border border-slate-700 focus:border-emerald-500 placeholder-slate-500 text-sm"
+            autoComplete="email"
           />
 
           <input
@@ -127,6 +118,7 @@ export default function LoginCliente({ onLoginSuccess, onCancelar, apiUrl }) {
             required
             onChange={handleChange}
             className="w-full p-3 bg-slate-800 rounded-xl text-white border border-slate-700 focus:border-emerald-500 placeholder-slate-500 text-sm"
+            autoComplete="current-password"
           />
 
           {/* Link de recuperación (solo en login, no en registro) */}
@@ -143,14 +135,14 @@ export default function LoginCliente({ onLoginSuccess, onCancelar, apiUrl }) {
 
           <button
             type="submit"
-            disabled={cargando}
+            disabled={loadingAuth}
             className="w-full py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl transition-all disabled:opacity-50 mt-2"
           >
-            {cargando
+            {loadingAuth
               ? "Procesando..."
               : esRegistro
-              ? "Registrarme"
-              : "Ingresar"}
+                ? "Registrarme"
+                : "Ingresar"}
           </button>
         </form>
 

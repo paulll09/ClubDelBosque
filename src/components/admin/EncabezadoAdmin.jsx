@@ -10,23 +10,24 @@ import React from "react";
  */
 export default function EncabezadoAdmin({ onLogout }) {
   return (
-    <div className="flex justify-between items-center pb-2 border-b border-slate-800/50">
+    <div className="flex justify-between items-center pb-4 border-b border-white/5">
       <div>
-        <h2 className="text-2xl font-bold text-white tracking-tight">
+        <h2 className="text-2xl font-bold text-white tracking-tight drop-shadow-md">
           Panel de Control
         </h2>
-        <p className="text-xs text-slate-400 mt-0.5">
-          Administración de turnos
+        <p className="text-xs text-slate-400 mt-0.5 font-medium">
+          Administración de turnos <span className="text-emerald-500">•</span> Club del Bosque
         </p>
       </div>
 
       <button
         onClick={onLogout}
-        className="bg-slate-800/50 hover:bg-red-500/10 text-slate-400 hover:text-red-400 p-2.5 rounded-xl transition-all border border-slate-700 hover:border-red-500/20"
+        className="group relative bg-slate-800/40 hover:bg-red-900/20 text-slate-400 hover:text-red-400 p-2.5 rounded-xl transition-all border border-white/5 hover:border-red-500/30 overflow-hidden"
         title="Cerrar Sesión"
       >
+        <div className="absolute inset-0 bg-red-500/10 scale-0 group-hover:scale-100 transition-transform duration-300 rounded-xl"></div>
         <svg
-          className="w-5 h-5"
+          className="w-5 h-5 relative z-10"
           fill="none"
           stroke="currentColor"
           strokeWidth="2"

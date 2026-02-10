@@ -11,19 +11,26 @@ import ResetPassword from "./components/ResetPassword.jsx";
 
 import "./index.css";
 
+import ErrorBoundary from "./components/ErrorBoundary";
+import { ToastProvider } from "./context/ToastContext";
+
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
-    <BrowserRouter>
-      <UserProvider>
-        <Routes>
-          <Route path="/" element={<App />} />
-          <Route path="/admin" element={<Admin />} />
+    <ErrorBoundary>
+      <ToastProvider>
+        <UserProvider>
+          <BrowserRouter>
+            <Routes>
+              <Route path="/" element={<App />} />
+              <Route path="/admin" element={<Admin />} />
 
-          {/* Recuperación de contraseña */}
-          <Route path="/forgot-password" element={<ForgotPassword />} />
-          <Route path="/reset-password" element={<ResetPassword />} />
-        </Routes>
-      </UserProvider>
-    </BrowserRouter>
+              {/* Recuperación de contraseña */}
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
+            </Routes>
+          </BrowserRouter>
+        </UserProvider>
+      </ToastProvider>
+    </ErrorBoundary>
   </React.StrictMode>
 );

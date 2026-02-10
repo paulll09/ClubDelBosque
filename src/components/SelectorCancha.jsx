@@ -22,31 +22,28 @@ export default function SelectorCancha({
             type="button"
             onClick={() => onSeleccionarCancha(cancha.id)}
             className={`
-              relative min-w-[150px] h-24 flex flex-col justify-center rounded-2xl border px-4 py-3 text-left
-              transition-all duration-200
-              ${
-                activa
-                  ? "bg-emerald-500 text-slate-950 border-emerald-400 scale-[1.03]"
-                  : "bg-slate-900 text-slate-100 border-slate-700 hover:border-slate-500 hover:bg-slate-800"
+              relative min-w-[160px] h-28 flex flex-col justify-end p-4 rounded-3xl border text-left overflow-hidden group
+              transition-all duration-300
+              ${activa
+                ? "bg-gradient-to-br from-emerald-600 to-teal-700 text-white border-emerald-400/50 shadow-xl shadow-emerald-900/30 ring-1 ring-emerald-400/50 scale-[1.02]"
+                : "glass-card text-slate-300 border-white/5 hover:border-emerald-500/30 hover:bg-slate-800/60"
               }
             `}
           >
-            <span className="text-sm font-semibold truncate">
+            {/* Decorative background gradient */}
+            <div className={`absolute -top-10 -right-10 w-24 h-24 rounded-full blur-2xl transition-all duration-500 ${activa ? 'bg-emerald-400/30' : 'bg-emerald-500/5 group-hover:bg-emerald-500/10'}`}></div>
+
+            <span className={`relative text-lg font-bold tracking-tight mb-1 transition-colors ${activa ? 'text-white' : 'text-slate-200 group-hover:text-emerald-300'}`}>
               {cancha.nombre || `Cancha ${cancha.id}`}
             </span>
 
             {cancha.descripcion && (
               <span
-                className={`mt-1 text-[11px] leading-snug line-clamp-2 ${
-                  activa ? "text-emerald-900/90" : "text-slate-400"
-                }`}
+                className={`relative text-[11px] leading-tight font-medium ${activa ? "text-emerald-100/90" : "text-slate-500 group-hover:text-slate-400"
+                  }`}
               >
                 {cancha.descripcion}
               </span>
-            )}
-
-            {activa && (
-              <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-8 h-[2px] rounded-full bg-slate-950/70" />
             )}
           </button>
         );

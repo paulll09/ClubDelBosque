@@ -30,41 +30,42 @@ export default function Admin() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-50 flex justify-center">
-      <div className="w-full max-w-7xl px-4 py-6 space-y-4">
+    <div className="min-h-screen bg-slate-950 text-slate-50 flex justify-center bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-slate-950 to-black">
+      <div className="w-full max-w-7xl px-4 py-8 space-y-6">
         {!logueado ? (
-          <>
-            <h1 className="text-2xl font-bold text-center mb-2">
-              Panel administrativo
+          <div className="flex flex-col items-center justify-center min-h-[60vh] animate-fadeIn">
+            <h1 className="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-200 mb-3 drop-shadow-lg">
+              Panel Administrativo
             </h1>
-            <p className="text-xs text-slate-400 text-center mb-4">
-              Ingrese con las credenciales de administrador para gestionar los turnos.
+            <p className="text-sm text-slate-400 text-center mb-8 max-w-md">
+              Gestioná las reservas, configuraciones y bloqueos del club desde un solo lugar.
             </p>
 
-            <LoginAdmin
-              apiUrl={API_URL}
-              onLoginCorrecto={manejarLoginCorrecto}
-            />
-          </>
+            <div className="glass-panel p-8 rounded-3xl w-full max-w-md relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-500"></div>
+              <LoginAdmin
+                apiUrl={API_URL}
+                onLoginCorrecto={manejarLoginCorrecto}
+              />
+            </div>
+          </div>
         ) : (
           <>
             {/* Tabs superiores */}
-            <div className="flex items-center justify-between mb-2">
-              <div className="inline-flex bg-slate-900 border border-slate-800 rounded-2xl p-1">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6 animate-slideUp">
+              <div className="inline-flex bg-slate-900/50 backdrop-blur-md border border-slate-800 rounded-2xl p-1.5 shadow-lg">
                 {[
                   { id: "reservas", label: "Reservas" },
                   { id: "config", label: "Configuración" },
                   { id: "bloqueos", label: "Bloqueos" },
-                  // más adelante: { id: "usuarios", label: "Usuarios" },
                 ].map((tab) => (
                   <button
                     key={tab.id}
                     onClick={() => setTabActiva(tab.id)}
-                    className={`px-3 py-1.5 text-xs font-semibold rounded-xl transition-all ${
-                      tabActiva === tab.id
-                        ? "bg-slate-800 text-white shadow-sm"
-                        : "text-slate-400 hover:text-slate-100 hover:bg-slate-800/70"
-                    }`}
+                    className={`px-5 py-2 text-xs font-bold rounded-xl transition-all duration-300 ${tabActiva === tab.id
+                        ? "bg-gradient-to-br from-emerald-600 to-emerald-500 text-white shadow-lg shadow-emerald-900/20"
+                        : "text-slate-400 hover:text-slate-100 hover:bg-white/5"
+                      }`}
                   >
                     {tab.label}
                   </button>
@@ -73,28 +74,31 @@ export default function Admin() {
 
               <button
                 onClick={manejarLogout}
-                className="bg-slate-900 border border-slate-700 px-3 py-1.5 rounded-xl text-xs text-slate-400 hover:text-red-400 hover:border-red-500/50 hover:bg-red-500/5 transition-all"
+                className="group flex items-center gap-2 bg-slate-900/50 border border-slate-700/50 px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-red-400 hover:border-red-500/30 hover:bg-red-500/10 transition-all"
               >
-                Cerrar sesión
+                <span>Cerrar sesión</span>
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="opacity-0 group-hover:opacity-100 transition-opacity"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" x2="9" y1="12" y2="12" /></svg>
               </button>
             </div>
 
             {/* Contenido según pestaña */}
-            {tabActiva === "reservas" && (
-              <AdminPanel
-                apiUrl={API_URL}
-                adminToken={adminToken}
-                onLogout={manejarLogout}
-              />
-            )}
+            <div className="animate-fadeIn" style={{ animationDelay: '0.1s' }}>
+              {tabActiva === "reservas" && (
+                <AdminPanel
+                  apiUrl={API_URL}
+                  adminToken={adminToken}
+                  onLogout={manejarLogout}
+                />
+              )}
 
-            {tabActiva === "config" && (
-              <AdminConfig apiUrl={API_URL} adminToken={adminToken} />
-            )}
+              {tabActiva === "config" && (
+                <AdminConfig apiUrl={API_URL} adminToken={adminToken} />
+              )}
 
-            {tabActiva === "bloqueos" && (
-              <AdminBloqueos apiUrl={API_URL} adminToken={adminToken} />
-            )}
+              {tabActiva === "bloqueos" && (
+                <AdminBloqueos apiUrl={API_URL} adminToken={adminToken} />
+              )}
+            </div>
           </>
         )}
       </div>

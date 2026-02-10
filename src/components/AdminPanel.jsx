@@ -274,201 +274,217 @@ export default function AdminPanel({ apiUrl, adminToken, onLogout }) {
    */
   const reservasVisibles = reservas;
 
-    return (
-    <div className="animate-fadeIn space-y-6 pb-16 w-full mx-auto px-2 sm:px-4 max-w-7xl">  
-        <EncabezadoAdmin onLogout={onLogout} />
+  return (
+    <div className="animate-fadeIn space-y-6 pb-16 w-full mx-auto px-2 sm:px-4 max-w-7xl">
+      <EncabezadoAdmin onLogout={onLogout} />
 
-    {/* Tabs */}
-    <div className="flex gap-2 px-2">
-      <button
-        type="button"
-        onClick={() => setVistaAdmin("calendario")}
-        className={`px-3 py-1 rounded-lg text-xs font-semibold ${
-          vistaAdmin === "calendario"
-            ? "bg-emerald-500 text-white"
-            : "bg-slate-800 text-slate-300 hover:bg-slate-700"
-        }`}
-      >
-        Calendario
-      </button>
-
-      <button
-        type="button"
-        onClick={() => setVistaAdmin("tarifas")}
-        className={`px-3 py-1 rounded-lg text-xs font-semibold ${
-          vistaAdmin === "tarifas"
-            ? "bg-emerald-500 text-white"
-            : "bg-slate-800 text-slate-300 hover:bg-slate-700"
-        }`}
-      >
-        Tarifas
-      </button>
-
-      <button
-        type="button"
-        onClick={() => setVistaAdmin("senias")}
-        className={`px-3 py-1 rounded-lg text-xs font-semibold ${
-          vistaAdmin === "senias"
-            ? "bg-emerald-500 text-white"
-            : "bg-slate-800 text-slate-300 hover:bg-slate-700"
-        }`}
-      >
-        Señas
-      </button>
-
-    </div>
-
-    {/* ===================== */}
-    {/* VISTA: CALENDARIO */}
-    {/* ===================== */}
-    {vistaAdmin === "calendario" && (
-      <>
-        <BarraFechaAdmin
-          fechaAdmin={fechaAdmin}
-          onFechaChange={setFechaAdmin}
-          cargando={cargando}
-          onRefrescar={cargarReservas}
-        />
-
-        <EstadisticasAdmin estadisticas={estadisticas} />
-
-        {/* ====== Form reserva manual (desde / hasta) ====== */}
-        <form
-          onSubmit={crearReservaManual}
-          className="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-4"
+      {/* Tabs */}
+      <div className="flex gap-2 px-2">
+        <button
+          type="button"
+          onClick={() => setVistaAdmin("calendario")}
+          className={`px-3 py-1 rounded-lg text-xs font-semibold ${vistaAdmin === "calendario"
+              ? "bg-emerald-500 text-white"
+              : "bg-slate-800 text-slate-300 hover:bg-slate-700"
+            }`}
         >
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <h3 className="text-sm font-semibold text-slate-100">
-                Crear reserva manual
-              </h3>
-              <p className="text-xs text-slate-400 mt-0.5">
-                Para reservas por teléfono/mostrador. Se crea como{" "}
-                <span className="text-slate-200 font-semibold">confirmada</span>.
-              </p>
-            </div>
+          Calendario
+        </button>
 
-            <button
-              type="button"
-              onClick={cargarReservas}
-              className="text-[11px] px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700"
-            >
-              Actualizar ↻
-            </button>
-          </div>
+        <button
+          type="button"
+          onClick={() => setVistaAdmin("tarifas")}
+          className={`px-3 py-1 rounded-lg text-xs font-semibold ${vistaAdmin === "tarifas"
+              ? "bg-emerald-500 text-white"
+              : "bg-slate-800 text-slate-300 hover:bg-slate-700"
+            }`}
+        >
+          Tarifas
+        </button>
 
-          {/* Fila 1: Cancha + Desde + Hasta */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">
-                Cancha
-              </label>
-              <select
-                value={manualCancha}
-                onChange={(e) => setManualCancha(e.target.value)}
-                className="w-full text-xs bg-slate-950 border border-slate-700 rounded-lg px-3 py-2"
+        <button
+          type="button"
+          onClick={() => setVistaAdmin("senias")}
+          className={`px-3 py-1 rounded-lg text-xs font-semibold ${vistaAdmin === "senias"
+              ? "bg-emerald-500 text-white"
+              : "bg-slate-800 text-slate-300 hover:bg-slate-700"
+            }`}
+        >
+          Señas
+        </button>
+
+      </div>
+
+      {/* ===================== */}
+      {/* VISTA: CALENDARIO */}
+      {/* ===================== */}
+      {vistaAdmin === "calendario" && (
+        <>
+          <BarraFechaAdmin
+            fechaAdmin={fechaAdmin}
+            onFechaChange={setFechaAdmin}
+            cargando={cargando}
+            onRefrescar={cargarReservas}
+          />
+
+          <EstadisticasAdmin estadisticas={estadisticas} />
+
+          {/* ====== Form reserva manual (desde / hasta) ====== */}
+          <form
+            onSubmit={crearReservaManual}
+            className="glass-panel p-6 rounded-3xl space-y-5 animate-slideUp"
+            style={{ animationDelay: '0.2s' }}
+          >
+            <div className="flex items-start justify-between gap-3 border-b border-white/5 pb-4">
+              <div>
+                <h3 className="text-base font-bold text-white flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                  Crear reserva manual
+                </h3>
+                <p className="text-xs text-slate-400 mt-1 pl-4">
+                  Para reservas por teléfono/mostrador. Se crea como{" "}
+                  <span className="text-emerald-400 font-semibold">confirmada</span>.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={cargarReservas}
+                className="text-[10px] px-3 py-1.5 rounded-lg bg-slate-800/50 hover:bg-slate-700 text-slate-300 border border-white/5 transition-all"
               >
-                <option value="1">Cancha 1</option>
-                <option value="2">Cancha 2</option>
-                <option value="3">Cancha 3</option>
-              </select>
-              <p className="text-[10px] text-slate-500 mt-1">
-                Fecha: <span className="text-slate-300">{fechaAdmin}</span>
-              </p>
+                Actualizar ↻
+              </button>
             </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">
-                Hora desde
-              </label>
-              <input
-                type="time"
-                value={manualHoraDesde}
-                onChange={(e) => setManualHoraDesde(e.target.value)}
-                className="w-full text-xs bg-slate-950 border border-slate-700 rounded-lg px-3 py-2"
-              />
+            {/* Fila 1: Cancha + Desde + Hasta */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5 pl-1">
+                  Cancha
+                </label>
+                <div className="relative">
+                  <select
+                    value={manualCancha}
+                    onChange={(e) => setManualCancha(e.target.value)}
+                    className="w-full text-xs bg-slate-900/50 text-white border border-slate-700 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all appearance-none"
+                  >
+                    <option value="1">Cancha 1</option>
+                    <option value="2">Cancha 2</option>
+                    <option value="3">Cancha 3</option>
+                  </select>
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="12"
+                      height="12"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="m6 9 6 6 6-6" />
+                    </svg>
+                  </div>
+                </div>
+                <p className="text-[10px] text-slate-500 mt-1 pl-1">
+                  Fecha: <span className="text-slate-300 font-medium">{fechaAdmin}</span>
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5 pl-1">
+                  Hora desde
+                </label>
+                <input
+                  type="time"
+                  value={manualHoraDesde}
+                  onChange={(e) => setManualHoraDesde(e.target.value)}
+                  className="w-full text-xs bg-slate-900/50 text-white border border-slate-700 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5 pl-1">
+                  Hora hasta
+                </label>
+                <input
+                  type="time"
+                  value={manualHoraHasta}
+                  onChange={(e) => setManualHoraHasta(e.target.value)}
+                  className="w-full text-xs bg-slate-900/50 text-white border border-slate-700 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all"
+                />
+                <p className="text-[10px] text-slate-500 mt-1 pl-1">
+                  Ej: 20:00 a 22:00 crea 20:00 y 21:00
+                </p>
+              </div>
             </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">
-                Hora hasta
-              </label>
-              <input
-                type="time"
-                value={manualHoraHasta}
-                onChange={(e) => setManualHoraHasta(e.target.value)}
-                className="w-full text-xs bg-slate-950 border border-slate-700 rounded-lg px-3 py-2"
-              />
-              <p className="text-[10px] text-slate-500 mt-1">
-                Ej: 20:00 a 22:00 crea 20:00 y 21:00
-              </p>
-            </div>
-          </div>
+            {/* Fila 2: Nombre + Teléfono */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5 pl-1">
+                  Nombre del cliente
+                </label>
+                <input
+                  value={manualNombre}
+                  onChange={(e) => setManualNombre(e.target.value)}
+                  placeholder="Ej: Juan Perez"
+                  className="w-full text-xs bg-slate-900/50 text-white border border-slate-700 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all placeholder-slate-600"
+                />
+              </div>
 
-          {/* Fila 2: Nombre + Teléfono */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">
-                Nombre
-              </label>
-              <input
-                value={manualNombre}
-                onChange={(e) => setManualNombre(e.target.value)}
-                placeholder="Ej: Juan Perez"
-                className="w-full text-xs bg-slate-950 border border-slate-700 rounded-lg px-3 py-2"
-              />
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5 pl-1">
+                  Teléfono (opcional)
+                </label>
+                <input
+                  value={manualTelefono}
+                  onChange={(e) => setManualTelefono(e.target.value)}
+                  placeholder="Ej: 3794..."
+                  className="w-full text-xs bg-slate-900/50 text-white border border-slate-700 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all placeholder-slate-600"
+                />
+              </div>
             </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">
-                Teléfono (opcional)
-              </label>
-              <input
-                value={manualTelefono}
-                onChange={(e) => setManualTelefono(e.target.value)}
-                placeholder="Ej: 3794..."
-                className="w-full text-xs bg-slate-950 border border-slate-700 rounded-lg px-3 py-2"
-              />
+            <div className="flex justify-end pt-2">
+              <button
+                type="submit"
+                disabled={creandoManual}
+                className="btn-primary-pro px-6 py-2.5 text-xs rounded-xl disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {creandoManual ? "Creando..." : "Crear reserva"}
+              </button>
             </div>
-          </div>
+          </form>
 
-          <div className="flex justify-end">
-            <button
-              type="submit"
-              disabled={creandoManual}
-              className="px-4 py-2 text-xs font-semibold rounded-xl bg-emerald-500 hover:bg-emerald-600 disabled:opacity-60 disabled:cursor-not-allowed text-white transition-colors"
-            >
-              {creandoManual ? "Creando..." : "Crear reserva"}
-            </button>
-          </div>
-        </form>
+          {/* SOLO CALENDARIO (sin lista) */}
+          <CalendarioAdmin
+            reservas={reservasVisibles}
+            fechaAdmin={fechaAdmin}
+            configClub={configClub}
+            bloqueosFijos={bloqueosFijos}
+            onCancelar={cancelarReserva}
+            onEliminar={eliminarReserva}
+          />
+        </>
+      )}
 
-        {/* SOLO CALENDARIO (sin lista) */}
-        <CalendarioAdmin
-          reservas={reservasVisibles}
-          fechaAdmin={fechaAdmin}
-          configClub={configClub}
-          bloqueosFijos={bloqueosFijos}
-          onCancelar={cancelarReserva}
-          onEliminar={eliminarReserva}
-        />
-      </>
-    )}
+      {/* ===================== */}
+      {/* VISTA: TARIFAS */}
+      {/* ===================== */}
+      {vistaAdmin === "tarifas" && (
+        <AdminTarifasHorarias apiUrl={apiUrl} adminToken={adminToken} />
+      )}
 
-    {/* ===================== */}
-    {/* VISTA: TARIFAS */}
-    {/* ===================== */}
-    {vistaAdmin === "tarifas" && (
-      <AdminTarifasHorarias apiUrl={apiUrl} adminToken={adminToken} />
-    )}
-
-    {/* ===================== */}
-    {/* VISTA: SENIAS */}
-    {/* ===================== */}
-    {vistaAdmin === "senias" && (
-      <AdminSeniasHorarias apiUrl={apiUrl} adminToken={adminToken} />
-    )}
-  </div>
-);
+      {/* ===================== */}
+      {/* VISTA: SENIAS */}
+      {/* ===================== */}
+      {vistaAdmin === "senias" && (
+        <AdminSeniasHorarias apiUrl={apiUrl} adminToken={adminToken} />
+      )}
+    </div>
+  );
 
 }

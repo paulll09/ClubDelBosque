@@ -16,9 +16,9 @@ export default function BarraFechaAdmin({
   onRefrescar,
 }) {
   return (
-    <div className="bg-slate-900 border border-slate-800 p-4 rounded-2xl flex flex-col lg:flex-row gap-4 items-center justify-between shadow-lg">
+    <div className="glass-panel p-4 rounded-2xl flex flex-col lg:flex-row gap-4 items-center justify-between">
       <div className="flex items-center gap-4 w-full lg:w-auto">
-        <div className="w-10 h-10 bg-emerald-500/10 rounded-xl flex items-center justify-center text-emerald-400 border border-emerald-500/20">
+        <div className="w-10 h-10 bg-gradient-to-br from-emerald-500/20 to-teal-500/10 rounded-xl flex items-center justify-center text-emerald-400 border border-emerald-500/20 shadow-sm shadow-emerald-900/20">
           <svg
             className="w-5 h-5"
             fill="none"
@@ -42,18 +42,19 @@ export default function BarraFechaAdmin({
             type="date"
             value={fechaAdmin}
             onChange={(e) => onFechaChange(e.target.value)}
-            className="bg-transparent text-white font-bold text-lg focus:outline-none w-full cursor-pointer"
+            className="bg-transparent text-white font-bold text-xl focus:outline-none w-full cursor-pointer hover:text-emerald-300 transition-colors"
           />
         </div>
       </div>
 
       <button
         onClick={onRefrescar}
-        className="p-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-all border border-slate-700"
+        className="group relative p-3 rounded-xl bg-slate-800/50 hover:bg-emerald-600 text-slate-400 hover:text-white transition-all border border-white/5 hover:border-emerald-500/50 hover:shadow-lg hover:shadow-emerald-900/30 overflow-hidden"
         title="Actualizar lista"
       >
+        <div className="absolute inset-0 bg-gradient-to-br from-emerald-400/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
         <svg
-          className={`w-5 h-5 ${cargando ? "animate-spin" : ""}`}
+          className={`w-5 h-5 relative z-10 ${cargando ? "animate-spin text-emerald-400" : ""}`}
           fill="none"
           stroke="currentColor"
           strokeWidth="2"
