@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 
 const DEFAULT_API_BASE =
   import.meta.env.VITE_API_URL || "https://api.clubdelbosquepadel.com";
-const DEFAULT_ADMIN_TOKEN = "";
+const DEFAULT_ADMIN_TOKEN = import.meta.env.VITE_ADMIN_TOKEN || "";
 
 function toHHMMSS(value) {
   if (!value) return "";
